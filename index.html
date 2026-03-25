@@ -3,135 +3,614 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vloz Telecom — Estoque Profissional</title>
+  <title>Vloz Telecom — Controle de Estoque</title>
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#162032" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="VloZ Estoque" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="shortcut icon" href="favicon.svg" />
+  <link rel="apple-touch-icon" href="favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
+<!-- ══ LOGIN ══════════════════════════════════════════════════ -->
 <div id="loginScreen" class="login-screen">
   <div class="login-bg-shape"></div>
   <div class="login-box">
     <div class="login-logo">
-      <div class="logo-mark">VZ</div>
-      <div class="login-logo-sub">vloZ telecom</div>
+      <!-- Substitua pelo caminho real do logo se necessário -->
+      <div style="width:100px;height:100px;background:var(--navy);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 8px">
+        <span style="color:var(--sage);font-size:2rem;font-weight:800;font-family:'DM Mono',monospace">VZ</span>
+      </div>
+      <div class="login-logo-sub">Sistema de Estoque</div>
     </div>
-    <h2 class="login-title">Acesso ao Sistema</h2>
+    <h2 class="login-title">Acesso ao sistema</h2>
     <div class="form-group">
       <label>Usuário</label>
-      <input type="text" id="loginUser" placeholder="seu.usuario" />
+      <input type="text" id="loginUser" placeholder="seu.usuario" autocomplete="username" />
     </div>
-    <div class="form-group">
+    <div class="form-group" style="margin-top:12px">
       <label>Senha</label>
-      <input type="password" id="loginPass" placeholder="••••••••" />
+      <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" />
     </div>
     <div id="loginError" class="login-error hidden">Credenciais inválidas</div>
-    <button class="btn-primary btn-full" onclick="App.login()">Entrar</button>
+    <button class="btn-primary btn-full" style="margin-top:20px" onclick="App.login()">Entrar</button>
+    <p class="login-hint" id="loginFrase"></p>
   </div>
 </div>
 
+<!-- ══ APP SHELL ═══════════════════════════════════════════════ -->
 <div id="appShell" class="app-shell hidden">
-  <aside class="sidebar">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-logo">
-        <span class="logo-name">VLOZ</span>
-        <span class="logo-sub">Estoque</span>
+        <div style="width:100px;height:36px;background:rgba(255,255,255,.08);border-radius:8px;display:flex;align-items:center;justify-content:center">
+          <span style="color:var(--sage);font-size:1.1rem;font-weight:800;font-family:'DM Mono',monospace;letter-spacing:.05em">VLOZ</span>
+        </div>
+        <div class="logo-sub">Estoque</div>
       </div>
+      <button class="sidebar-close" onclick="App.toggleSidebar()">✕</button>
     </div>
+
     <nav class="sidebar-nav">
-      <button class="nav-item active" onclick="App.navigate('dashboard')">◈ Dashboard</button>
-      <button class="nav-item" onclick="App.navigate('produtos')">▦ Produtos</button>
-      <button class="nav-item" onclick="App.navigate('movimentacao')">⇄ Movimentação</button>
-      <button class="nav-item" onclick="App.navigate('historico')">≡ Histórico</button>
+      <button class="nav-item active" data-page="dashboard" onclick="App.navigate('dashboard')">
+        <span class="nav-icon">◈</span><span>Dashboard</span>
+      </button>
+      <button class="nav-item" data-page="produtos" onclick="App.navigate('produtos')">
+        <span class="nav-icon">▦</span><span>Produtos</span>
+      </button>
+      <button class="nav-item" data-page="movimentacao" onclick="App.navigate('movimentacao')">
+        <span class="nav-icon">⇄</span><span>Movimentação</span>
+      </button>
+      <button class="nav-item" data-page="historico" onclick="App.navigate('historico')">
+        <span class="nav-icon">≡</span><span>Histórico</span>
+      </button>
+      <button class="nav-item" data-page="categorias" onclick="App.navigate('categorias')">
+        <span class="nav-icon">◧</span><span>Categorias</span>
+      </button>
+      <button class="nav-item" data-page="usuarios" onclick="App.navigate('usuarios')">
+        <span class="nav-icon">◎</span><span>Usuários</span>
+      </button>
+      <button class="nav-item" data-page="exportar" onclick="App.navigate('exportar')">
+        <span class="nav-icon">↑</span><span>Exportar / Backup</span>
+      </button>
     </nav>
+
     <div class="sidebar-footer">
       <div class="user-badge">
-        <div class="user-avatar" id="sidebarAvatar">U</div>
-        <div class="user-info">
-          <div class="user-name" id="sidebarUser">Usuário</div>
-          <div class="user-role" id="sidebarRole">Carregando...</div>
+        <div class="user-avatar" id="sidebarAvatar">A</div>
+        <div>
+          <div class="user-name" id="sidebarUser">Admin</div>
+          <div class="user-role" id="sidebarRole">Administrador</div>
         </div>
       </div>
       <button class="btn-logout" onclick="App.logout()">Sair</button>
     </div>
   </aside>
 
+  <!-- MAIN -->
   <main class="main-content">
     <header class="topbar">
+      <button class="hamburger" onclick="App.toggleSidebar()">☰</button>
       <div class="topbar-title" id="topbarTitle">Dashboard</div>
       <div class="topbar-actions">
-        <div class="stock-indicators">
-          <div class="stock-ind"><span class="ind-dot dot-danger"></span> <span id="indZeradoVal">0</span></div>
-          <div class="stock-ind"><span class="ind-dot dot-warn"></span> <span id="indBaixoVal">0</span></div>
+        <!-- Badge perfil do usuário -->
+        <span id="badgePerfilHeader"></span>
+
+        <!-- Indicadores de estoque -->
+        <div class="stock-indicators" onclick="App.navigate('dashboard')" title="Ver alertas no Dashboard" style="cursor:pointer">
+          <div class="stock-ind" id="indZerado">
+            <span class="ind-dot dot-danger"></span>
+            <span class="ind-label">Zerados:</span>
+            <span class="ind-val" id="indZeradoVal">0</span>
+          </div>
+          <div class="ind-divider"></div>
+          <div class="stock-ind" id="indBaixo">
+            <span class="ind-dot dot-warn"></span>
+            <span class="ind-label">Estoque baixo:</span>
+            <span class="ind-val" id="indBaixoVal">0</span>
+          </div>
+          <div class="ind-divider"></div>
+          <div class="stock-ind" id="indOk">
+            <span class="ind-dot dot-ok"></span>
+            <span class="ind-label">OK:</span>
+            <span class="ind-val" id="indOkVal">0</span>
+          </div>
         </div>
       </div>
     </header>
 
+    <!-- ── DASHBOARD ─────────────────────────── -->
+    <section id="page-dashboard" class="page active">
+      <div class="page-header">
+        <h1>Dashboard</h1>
+        <p class="page-sub" id="dashDate"></p>
+      </div>
+
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card sc-navy" onclick="App.navigate('produtos')">
+          <div class="sc-icon-wrap sc-icon-navy">▦</div>
+          <div class="sc-body">
+            <div class="sc-val" id="statTotal">0</div>
+            <div class="sc-title">Produtos cadastrados</div>
+            <div class="sc-sub">no sistema</div>
+          </div>
+        </div>
+        <div class="stat-card sc-green" onclick="App.navigate('historico')">
+          <div class="sc-icon-wrap sc-icon-green">↓</div>
+          <div class="sc-body">
+            <div class="sc-val" id="statEntradas">0</div>
+            <div class="sc-title">Entradas de estoque</div>
+            <div class="sc-sub">nos últimos 30 dias</div>
+          </div>
+        </div>
+        <div class="stat-card sc-warn" onclick="App.navigate('historico')">
+          <div class="sc-icon-wrap sc-icon-warn">↑</div>
+          <div class="sc-body">
+            <div class="sc-val" id="statSaidas">0</div>
+            <div class="sc-title">Saídas de estoque</div>
+            <div class="sc-sub">nos últimos 30 dias</div>
+          </div>
+        </div>
+        <div class="stat-card sc-danger" onclick="App.navigate('dashboard')">
+          <div class="sc-icon-wrap sc-icon-danger">⚠</div>
+          <div class="sc-body">
+            <div class="sc-val" id="statAlertas">0</div>
+            <div class="sc-title">Alertas de estoque</div>
+            <div class="sc-sub" id="statAlertasSub">produtos zerados ou abaixo do mínimo</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="card">
+          <div class="card-header">
+            <h3>Movimentações Recentes</h3>
+            <button class="btn-link" onclick="App.navigate('historico')">Ver tudo →</button>
+          </div>
+          <div id="dashMovRecentes" class="mov-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>⚠ Alertas de Estoque</h3></div>
+          <div id="dashAlertas" class="alert-list"></div>
+        </div>
+      </div>
+
+      <div class="card mt">
+        <div class="card-header"><h3>Distribuição por Categoria</h3></div>
+        <div id="dashChart" class="bar-chart"></div>
+      </div>
+    </section>
+
+    <!-- ── PRODUTOS ───────────────────────────── -->
     <section id="page-produtos" class="page">
       <div class="page-header">
         <h1>Produtos</h1>
         <button class="btn-primary" onclick="App.openModalProduto()">+ Novo Produto</button>
       </div>
+
       <div class="filters-bar">
-        <input type="text" id="searchProdutos" placeholder="Buscar SKU ou Nome..." oninput="App.renderProdutos()" />
+        <input type="text" id="searchProdutos" placeholder="Buscar por nome ou código…" oninput="App.renderProdutos()" />
+        <select id="filterCategoria" onchange="App.renderProdutos()">
+          <option value="">Todas as categorias</option>
+        </select>
+        <select id="filterStatus" onchange="App.renderProdutos()">
+          <option value="">Todos os status</option>
+          <option value="novo">Novo</option>
+          <option value="usado">Usado</option>
+          <option value="defeituoso">Defeituoso</option>
+        </select>
       </div>
+
+      <div class="stock-legend">
+        <span style="font-weight:600;color:var(--text2)">Estoque:</span>
+        <div class="legend-item"><span class="legend-dot dot-ok"></span> OK (acima do mínimo)</div>
+        <div class="legend-item"><span class="legend-dot dot-warn"></span> Atenção (abaixo do mínimo)</div>
+        <div class="legend-item"><span class="legend-dot dot-danger"></span> Zerado</div>
+      </div>
+
       <div class="table-wrap">
-        <table class="data-table">
+        <table class="data-table" id="tabelaProdutos">
           <thead>
             <tr>
-              <th>SKU</th>
-              <th>NOME</th>
-              <th>CATEGORIA</th>
-              <th>ESTOQUE</th>
-              <th>AÇÕES</th>
+              <th>Código</th>
+              <th>Nome</th>
+              <th>Categoria</th>
+              <th>Qtd</th>
+              <th>Mín</th>
+              <th>Status</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody id="tabelaProdutosBody"></tbody>
         </table>
       </div>
     </section>
+
+    <!-- ── MOVIMENTAÇÃO ───────────────────────── -->
+    <section id="page-movimentacao" class="page">
+      <div class="page-header">
+        <h1>Movimentação</h1>
+      </div>
+      <div class="mov-tabs">
+        <button class="mov-tab active" data-tab="entrada" onclick="App.switchMovTab('entrada')">↓ Entrada</button>
+        <button class="mov-tab" data-tab="saida" onclick="App.switchMovTab('saida')">↑ Saída</button>
+        <button class="mov-tab" data-tab="defeito" onclick="App.switchMovTab('defeito')">⚠ Defeituoso</button>
+      </div>
+
+      <!-- Entrada -->
+      <div id="tabEntrada" class="mov-panel">
+        <div class="card">
+          <h3 class="card-title">Registrar Entrada</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Produto *</label>
+              <select id="entradaProduto"><option value="">Selecione…</option></select>
+            </div>
+            <div class="form-group">
+              <label>Quantidade *</label>
+              <input type="number" id="entradaQtd" min="1" value="1" />
+            </div>
+            <div class="form-group">
+              <label>Fornecedor / Origem</label>
+              <input type="text" id="entradaOrigem" placeholder="Ex: Fornecedor ABC" />
+            </div>
+            <div class="form-group">
+              <label>Nota Fiscal</label>
+              <input type="text" id="entradaNF" placeholder="NF-0001" />
+            </div>
+            <div class="form-group full">
+              <label>Observação</label>
+              <textarea id="entradaObs" rows="2" placeholder="Detalhes adicionais…"></textarea>
+            </div>
+          </div>
+          <button class="btn-primary" onclick="App.registrarEntrada()">↓ Confirmar Entrada</button>
+        </div>
+      </div>
+
+      <!-- Saída -->
+      <div id="tabSaida" class="mov-panel hidden">
+        <div class="card">
+          <h3 class="card-title">Registrar Saída</h3>
+          <div class="saida-usuario-badge" id="saidaUsuarioBadge"></div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Produto *</label>
+              <select id="saidaProduto"><option value="">Selecione…</option></select>
+            </div>
+            <div class="form-group">
+              <label>Quantidade *</label>
+              <input type="number" id="saidaQtd" min="1" value="1" />
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:16px">
+            <label>Motivo da saída *</label>
+            <div class="motivo-grid" id="motivoGrid">
+              <button type="button" class="motivo-btn" data-motivo="Instalação"  onclick="App.selecionarMotivo(this)">🔧 Instalação</button>
+              <button type="button" class="motivo-btn" data-motivo="Troca"       onclick="App.selecionarMotivo(this)">🔄 Troca</button>
+              <button type="button" class="motivo-btn" data-motivo="Venda"       onclick="App.selecionarMotivo(this)">💰 Venda</button>
+              <button type="button" class="motivo-btn" data-motivo="Manutenção"  onclick="App.selecionarMotivo(this)">🛠 Manutenção</button>
+              <button type="button" class="motivo-btn" data-motivo="Empréstimo"  onclick="App.selecionarMotivo(this)">🤝 Empréstimo</button>
+              <button type="button" class="motivo-btn" data-motivo="Outros"      onclick="App.selecionarMotivo(this)">📝 Outros</button>
+            </div>
+            <input type="hidden" id="saidaMotivo" />
+          </div>
+          <div class="form-group" style="margin-bottom:16px">
+            <label>OS / Referência</label>
+            <input type="text" id="saidaDestino" placeholder="Ex: OS #1234 · Cliente João Silva" />
+          </div>
+          <div class="form-group hidden" id="saidaOutrosGroup" style="margin-bottom:16px">
+            <label>Descreva o motivo *</label>
+            <textarea id="saidaObs" rows="2" placeholder="Informe o motivo detalhado…"></textarea>
+          </div>
+          <div class="form-group" id="saidaObsExtraGroup" style="margin-bottom:18px">
+            <label>Observação adicional <span style="color:var(--text3);font-weight:400">(opcional)</span></label>
+            <textarea id="saidaObsExtra" rows="2" placeholder="Detalhes adicionais…"></textarea>
+          </div>
+          <button class="btn-primary" onclick="App.registrarSaida()">↑ Confirmar Saída</button>
+        </div>
+      </div>
+
+      <!-- Defeito -->
+      <div id="tabDefeito" class="mov-panel hidden">
+        <div class="card">
+          <h3 class="card-title">Registrar Material Defeituoso</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Produto *</label>
+              <select id="defeitoProduto"><option value="">Selecione…</option></select>
+            </div>
+            <div class="form-group">
+              <label>Quantidade *</label>
+              <input type="number" id="defeitoQtd" min="1" value="1" />
+            </div>
+            <div class="form-group full">
+              <label>Motivo / Descrição do Defeito *</label>
+              <textarea id="defeitoMotivo" rows="2" placeholder="Descreva o defeito encontrado…"></textarea>
+            </div>
+          </div>
+          <button class="btn-warning" onclick="App.registrarDefeito()">⚠ Registrar Defeito</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── HISTÓRICO ──────────────────────────── -->
+    <section id="page-historico" class="page">
+      <div class="page-header">
+        <h1>Histórico de Movimentações</h1>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-outline" onclick="App.exportarHistoricoCSV()">↓ Exportar CSV</button>
+          <button class="btn-danger" id="btnLimparHistorico" onclick="App.limparHistorico()" style="display:none">🗑 Limpar Histórico</button>
+        </div>
+      </div>
+      <div class="filters-bar">
+        <input type="text" id="histSearch" placeholder="Buscar produto…" oninput="App.renderHistorico()" />
+        <select id="histTipo" onchange="App.renderHistorico()">
+          <option value="">Todos os tipos</option>
+          <option value="entrada">Entrada</option>
+          <option value="saida">Saída</option>
+          <option value="defeito">Defeituoso</option>
+          <option value="edicao">Edição</option>
+          <option value="exclusao">Exclusão</option>
+        </select>
+        <input type="date" id="histDataInicio" onchange="App.renderHistorico()" />
+        <input type="date" id="histDataFim"    onchange="App.renderHistorico()" />
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr><th>Data</th><th>Tipo</th><th>Produto</th><th>Qtd</th><th>Usuário</th><th>Detalhe / Justificativa</th></tr>
+          </thead>
+          <tbody id="historicoBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── CATEGORIAS ─────────────────────────── -->
+    <section id="page-categorias" class="page">
+      <div class="page-header">
+        <h1>Categorias</h1>
+        <button class="btn-primary" onclick="App.openModal('modalCategoria')">+ Nova Categoria</button>
+      </div>
+      <div id="categoriasGrid" class="cat-grid"></div>
+    </section>
+
+    <!-- ── USUÁRIOS ───────────────────────────── -->
+    <section id="page-usuarios" class="page">
+      <div class="page-header">
+        <h1>Usuários</h1>
+        <button class="btn-primary" onclick="App.openModal('modalUsuario')">+ Novo Usuário</button>
+      </div>
+      <div id="usuariosAviso" style="display:none;align-items:center;gap:12px;background:rgba(22,32,50,.05);border:1px solid rgba(22,32,50,.12);border-left:3px solid var(--navy);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:16px;font-size:.875rem;color:var(--text2)">
+        <span style="font-size:1.1rem">🔒</span>
+        <span>Visualização apenas. Somente <strong>Administradores</strong> podem adicionar, editar ou excluir usuários.</span>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Login</th><th>Nome</th><th>Perfil</th><th>Ações</th></tr></thead>
+          <tbody id="usuariosBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── EXPORTAR ───────────────────────────── -->
+    <section id="page-exportar" class="page">
+      <div class="page-header"><h1>Exportar &amp; Backup</h1></div>
+      <div class="export-grid">
+        <div class="card export-card">
+          <div class="export-icon">↓</div>
+          <h3>Exportar Produtos (CSV)</h3>
+          <p>Baixe a lista completa de produtos em formato CSV.</p>
+          <button class="btn-primary" onclick="App.exportarProdutosCSV()">Exportar CSV</button>
+        </div>
+        <div class="card export-card">
+          <div class="export-icon">{ }</div>
+          <h3>Backup Completo (JSON)</h3>
+          <p>Exporta todos os dados do sistema para restauração futura.</p>
+          <button class="btn-primary" onclick="App.exportarBackup()">Gerar Backup</button>
+        </div>
+        <div class="card export-card">
+          <div class="export-icon">↑</div>
+          <h3>Restaurar Backup</h3>
+          <p>Importe um backup JSON gerado anteriormente.</p>
+          <input type="file" id="importFile" accept=".json" style="display:none" onchange="App.importarBackup(event)" />
+          <button class="btn-outline" onclick="document.getElementById('importFile').click()">Selecionar Arquivo</button>
+        </div>
+        <div class="card export-card">
+          <div class="export-icon">≡</div>
+          <h3>Exportar Histórico (CSV)</h3>
+          <p>Baixe todo o log de movimentações com justificativas.</p>
+          <button class="btn-outline" onclick="App.exportarHistoricoCSV()">Exportar CSV</button>
+        </div>
+      </div>
+    </section>
   </main>
 </div>
 
-<div id="modalProduto" class="modal-overlay hidden">
+<!-- ══ MODAIS ══════════════════════════════════════════════════ -->
+
+<!-- Modal Produto -->
+<div id="modalProduto" class="modal-overlay hidden" onclick="App.closeModalOutside(event,'modalProduto')">
   <div class="modal">
     <div class="modal-header">
-      <h2>Cadastrar Material</h2>
+      <h2 id="modalProdutoTitle">Novo Produto</h2>
       <button onclick="App.closeModal('modalProduto')">✕</button>
     </div>
     <div class="modal-body">
+      <input type="hidden" id="prodId" />
       <div class="form-grid">
-        <div class="form-group full">
-          <label>Nome do Produto</label>
-          <input type="text" id="prodNome" />
+        <div class="form-group">
+          <label>Categoria *</label>
+          <select id="prodCategoria"><option value="">Selecione a categoria…</option></select>
         </div>
         <div class="form-group">
-          <label>Categoria (Gera o SKU)</label>
-          <select id="prodCategoria" onchange="App.handleCategoriaChange()">
-            <option value="">Selecione...</option>
-            <option value="Rede">Rede</option>
-            <option value="Equipamentos">Equipamentos</option>
-            <option value="Cabos">Cabos</option>
-            <option value="Ferramentas">Ferramentas</option>
+          <label>Código Interno <span style="color:var(--text3);font-weight:400">(auto)</span></label>
+          <input type="text" id="prodCodigo" placeholder="Gerado automaticamente" readonly
+            style="background:var(--surface2);cursor:default;color:var(--text2)" />
+        </div>
+        <div class="form-group full">
+          <label>Nome *</label>
+          <input type="text" id="prodNome" placeholder="Nome do produto" />
+        </div>
+        <div class="form-group">
+          <label>Unidade</label>
+          <select id="prodUnidade">
+            <option>unidade</option><option>metro</option><option>caixa</option>
+            <option>rolo</option><option>par</option><option>litro</option><option>kg</option>
           </select>
         </div>
         <div class="form-group">
-          <label>SKU Gerado</label>
-          <input type="text" id="prodCodigo" readonly style="background:#f0f2f5" />
+          <label>Status</label>
+          <select id="prodStatus">
+            <option value="novo">Novo</option>
+            <option value="usado">Usado</option>
+            <option value="defeituoso">Defeituoso</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Quantidade Atual</label>
+          <input type="number" id="prodQtd" min="0" value="0" />
+        </div>
+        <div class="form-group">
+          <label>Quantidade Mínima</label>
+          <input type="number" id="prodQtdMin" min="0" value="5" />
+        </div>
+        <div class="form-group full">
+          <label>Descrição</label>
+          <textarea id="prodDescricao" rows="2" placeholder="Detalhes do produto…"></textarea>
         </div>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn-primary" onclick="App.salvarProduto()">Salvar</button>
+      <button class="btn-outline" onclick="App.closeModal('modalProduto')">Cancelar</button>
+      <button class="btn-primary" onclick="App.salvarProduto()">Salvar Produto</button>
     </div>
   </div>
 </div>
 
+<!-- Modal Categoria -->
+<div id="modalCategoria" class="modal-overlay hidden" onclick="App.closeModalOutside(event,'modalCategoria')">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Categoria</h2>
+      <button onclick="App.closeModal('modalCategoria')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="catId" />
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Nome *</label>
+          <input type="text" id="catNome" placeholder="Ex: Roteadores / ONU" />
+        </div>
+        <div class="form-group">
+          <label>Prefixo do código <span style="color:var(--text3);font-weight:400">(3-4 letras)</span></label>
+          <input type="text" id="catPrefixo" placeholder="Ex: ROT" maxlength="4"
+            style="text-transform:uppercase;font-family:'DM Mono',monospace;font-weight:700"
+            oninput="this.value=this.value.toUpperCase()" />
+        </div>
+        <div class="form-group">
+          <label>Ícone (emoji)</label>
+          <input type="text" id="catIcone" placeholder="📦" maxlength="4" />
+        </div>
+        <div class="form-group full">
+          <label>Grupo</label>
+          <select id="catGrupo">
+            <option value="Rede / Provedor">Rede / Provedor</option>
+            <option value="Escritório">Escritório</option>
+            <option value="Limpeza">Limpeza</option>
+            <option value="Ferramentas">Ferramentas</option>
+            <option value="Outro">Outro</option>
+          </select>
+        </div>
+      </div>
+      <div style="background:var(--bg);border-radius:var(--radius-sm);padding:10px 14px;font-size:.8rem;color:var(--text3);margin-top:4px">
+        💡 O prefixo define o código automático dos produtos: <strong style="font-family:'DM Mono',monospace;color:var(--navy)">ROT-0001</strong>, <strong style="font-family:'DM Mono',monospace;color:var(--navy)">FIB-0002</strong>…
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="App.closeModal('modalCategoria')">Cancelar</button>
+      <button class="btn-primary" onclick="App.salvarCategoria()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Usuário -->
+<div id="modalUsuario" class="modal-overlay hidden" onclick="App.closeModalOutside(event,'modalUsuario')">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalUsuarioTitle">Novo Usuário</h2>
+      <button onclick="App.closeModal('modalUsuario')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="userId" />
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Nome Completo *</label>
+          <input type="text" id="userName" placeholder="João da Silva" />
+        </div>
+        <div class="form-group">
+          <label>Login *</label>
+          <input type="text" id="userLogin" placeholder="joao.silva" autocomplete="off" />
+        </div>
+        <div class="form-group">
+          <label>Senha *</label>
+          <input type="password" id="userPass" placeholder="••••••••" autocomplete="new-password" />
+        </div>
+        <div class="form-group full">
+          <label>Perfil de Acesso</label>
+          <select id="userRole">
+            <option value="admin">Administrador — acesso total</option>
+            <option value="almoxarife" selected>Almoxarife — cadastra e movimenta</option>
+            <option value="tecnico">Técnico — apenas saídas</option>
+            <option value="visualizador">Visualizador — somente leitura</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="App.closeModal('modalUsuario')">Cancelar</button>
+      <button class="btn-primary" onclick="App.salvarUsuario()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Movimentação / Baixa -->
+<div id="modalMovimento" class="modal-overlay hidden" onclick="App.closeModalOutside(event,'modalMovimento')">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalMovTitle">Movimentação</h2>
+      <button onclick="App.closeModal('modalMovimento')">✕</button>
+    </div>
+    <div class="modal-body" id="modalMovBody"></div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="App.closeModal('modalMovimento')">Cancelar</button>
+      <button class="btn-primary" id="modalMovConfirm">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
 <div id="toast" class="toast hidden"></div>
+
 <script type="module" src="app.js"></script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(() => console.log('[PWA] Service Worker registrado'))
+        .catch(e => console.warn('[PWA] SW não registrado:', e));
+    });
+  }
+</script>
 </body>
 </html>

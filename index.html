@@ -4,12 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Vloz Telecom — Controle de Estoque</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#162032" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="VloZ Estoque" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="shortcut icon" href="favicon.svg" />
+  <link rel="apple-touch-icon" href="favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
-  <link rel="manifest" href="/manifest.json" />
-  <meta name="theme-color" content="#162032" />
 </head>
 <body>
 
@@ -588,5 +595,16 @@
 <div id="toast" class="toast hidden"></div>
 
 <script type="module" src="app.js"></script>
+
+<script>
+  // Registra o Service Worker para funcionar como PWA no celular
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(() => console.log('[PWA] Service Worker registrado'))
+        .catch(e => console.warn('[PWA] SW não registrado:', e));
+    });
+  }
+</script>
 </body>
 </html>

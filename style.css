@@ -4,43 +4,84 @@
 
    :root {
     --navy: #162032;
+    --navy-dark: #0e1622;
     --sage: #8FBD9A;
-    --sage-dk: #6fa67e;
     --bg: #F4F6F9;
-    --surface: rgba(255, 255, 255, 0.95);
+    --surface: #FFFFFF;
     --border: rgba(22, 32, 50, 0.08);
     --text: #0e1622;
-    --text-sec: #4a5568;
-    --danger: #E5484D;
-    --warn: #F5C842;
     --radius: 14px;
-    --shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+    --shadow: 0 8px 30px rgba(0,0,0,0.04);
     --sidebar-w: 240px;
   }
   
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   
   body { 
     font-family: 'DM Sans', -apple-system, sans-serif; 
     background: var(--bg); 
     color: var(--text);
-    overflow-x: hidden;
+    min-height: 100vh;
   }
   
   .hidden { display: none !important; }
   
-  /* ── LAYOUT PRINCIPAL ── */
+  /* ── TELA DE LOGIN (CENTRALIZAÇÃO CORRIGIDA) ── */
+  .login-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--navy);
+    padding: 20px;
+    position: relative;
+  }
+  
+  .login-box {
+    width: 100%;
+    max-width: 400px;
+    background: white;
+    padding: 40px;
+    border-radius: 24px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    z-index: 10;
+  }
+  
+  .logo-mark {
+    width: 64px;
+    height: 64px;
+    background: var(--navy);
+    color: var(--sage);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 24px;
+    margin: 0 auto 15px;
+  }
+  
+  .login-logo-sub {
+    color: var(--navy);
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-size: 14px;
+    margin-bottom: 25px;
+  }
+  
+  /* ── LAYOUT PRINCIPAL (APP SHELL) ── */
   .app-shell { display: flex; min-height: 100vh; }
   
   .sidebar {
     width: var(--sidebar-w);
     background: var(--navy);
-    color: #fff;
-    display: flex;
-    flex-direction: column;
+    color: white;
     position: fixed;
     height: 100vh;
-    z-index: 100;
+    display: flex;
+    flex-direction: column;
   }
   
   .main-content {
@@ -49,102 +90,98 @@
     padding: 30px;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 20px;
   }
   
-  /* ── ESTÉTICA APPLE (CARDS E MODAIS) ── */
-  .card, .modal {
-    background: var(--surface);
-    backdrop-filter: blur(10px);
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow);
-  }
-  
-  .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border);
-  }
-  
-  /* ── TABELAS SIMÉTRICAS ── */
-  .table-wrap {
-    background: white;
-    border-radius: var(--radius);
-    overflow: hidden;
-    box-shadow: var(--shadow);
-    width: 100%;
-  }
-  
-  .data-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-  }
-  
-  .data-table thead th {
-    background: #f8fafc;
-    padding: 16px;
-    text-align: left;
-    font-weight: 600;
-    color: var(--navy);
-    text-transform: uppercase;
-    font-size: 0.75rem;
-    letter-spacing: 0.05em;
-  }
-  
-  .data-table tbody td {
-    padding: 14px 16px;
-    border-bottom: 1px solid #f1f5f9;
-  }
-  
-  .data-table tbody tr:hover {
-    background: rgba(143, 189, 154, 0.05);
-  }
-  
-  /* ── BOTÕES E INPUTS ── */
+  /* ── ELEMENTOS DE UI ── */
   .btn-primary {
     background: var(--navy);
     color: white;
     border: none;
-    padding: 12px 24px;
-    border-radius: 10px;
-    font-weight: 500;
+    padding: 14px 24px;
+    border-radius: 12px;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
-  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(22, 32, 50, 0.2); }
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  }
   
-  input, select, textarea {
+  .btn-full { width: 100%; }
+  
+  .form-group {
+    text-align: left;
+    margin-bottom: 15px;
+  }
+  
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #64748b;
+  }
+  
+  input, select {
     width: 100%;
     padding: 12px;
     border-radius: 10px;
     border: 1px solid var(--border);
     background: #fff;
     font-family: inherit;
-    transition: border-color 0.2s;
   }
   
-  input:focus { border-color: var(--sage); outline: none; }
+  input:focus {
+    border-color: var(--sage);
+    outline: none;
+  }
   
-  /* ── TRAVAS DE SEGURANÇA VISUAIS ── */
-  .btn-icon.danger:hover { color: var(--danger); background: #fff0f0; }
+  .table-wrap {
+    background: white;
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
   
-  .row-zero { background: rgba(229, 72, 77, 0.05); }
-  .row-warn { background: rgba(245, 200, 66, 0.05); }
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
   
-  /* ── TOASTS ── */
-  .toast {
+  .data-table th {
+    background: #f8fafc;
+    padding: 16px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+  }
+  
+  .data-table td {
+    padding: 16px;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  
+  .modal-overlay {
     position: fixed;
-    bottom: 24px;
-    right: 24px;
-    padding: 16px 24px;
-    background: var(--navy);
-    color: white;
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     z-index: 1000;
+  }
+  
+  .modal {
+    background: white;
+    padding: 35px;
+    border-radius: 24px;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
   }

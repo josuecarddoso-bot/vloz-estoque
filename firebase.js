@@ -29,12 +29,13 @@ import {
    → Seu projeto → ⚙️ Configurações → Seus apps → </> Web
    ─────────────────────────────────────────────────────────────── */
 const firebaseConfig = {
-  apiKey:            "COLE_AQUI_SUA_API_KEY",
-  authDomain:        "COLE_AQUI.firebaseapp.com",
-  projectId:         "COLE_AQUI_SEU_PROJECT_ID",
-  storageBucket:     "COLE_AQUI.appspot.com",
-  messagingSenderId: "COLE_AQUI",
-  appId:             "COLE_AQUI_SEU_APP_ID",
+  apiKey: "AIzaSyC6mdmwhOIhRnsX1Q2JxLRL2Kh7xXOSJB0",
+  authDomain: "vloz-estoque.firebaseapp.com",
+  databaseURL: "https://vloz-estoque-default-rtdb.firebaseio.com",
+  projectId: "vloz-estoque",
+  storageBucket: "vloz-estoque.firebasestorage.app",
+  messagingSenderId: "79794241039",
+  appId: "1:79794241039:web:1cdf606d09828517296d7a"
 };
 
 /* ── 2. INICIALIZAÇÃO ───────────────────────────────────────────

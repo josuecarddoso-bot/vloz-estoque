@@ -1,0 +1,13 @@
+{
+  "name": "VloZ Estoque",
+  "short_name": "VloZ",
+  "description": "Sistema de controle de estoque Vloz Telecom",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#162032",
+  "theme_color": "#162032",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

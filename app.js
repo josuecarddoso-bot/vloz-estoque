@@ -78,20 +78,24 @@ const App = (() => {
     document.getElementById('prodQtdMin').value = '5';
     document.getElementById('prodStatus').value = 'novo';
     document.getElementById('prodDescricao').value = '';
-
+  
     populateSelects();
-
-    setTimeout(() => {
-      const select = document.getElementById('prodCategoria');
-
-select.addEventListener('change', () => {
-  const categoriaId = select.value;
-  if (!categoriaId) return;
-
-  const codigo = gerarCodigoPorCategoria(categoriaId, state.produtos);
-  document.getElementById('prodCodigo').value = codigo;
-});
-
+  
+    const select = document.getElementById('prodCategoria');
+  
+    // REMOVE eventos antigos (evita duplicação)
+    select.onchange = null;
+  
+    // EVENTO CORRETO
+    select.addEventListener('change', () => {
+      const categoriaId = select.value;
+      if (!categoriaId) return;
+  
+      const codigo = gerarCodigoPorCategoria(categoriaId, state.produtos);
+      document.getElementById('prodCodigo').value = codigo;
+    });
+  
+    // abre modal (fora de qualquer timeout)
     document.getElementById('modalProduto').classList.remove('hidden');
   }
 

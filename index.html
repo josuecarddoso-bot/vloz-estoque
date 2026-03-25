@@ -3,14 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vloz Telecom — Controle de Estoque Profissional</title>
+  <title>Vloz Telecom — Estoque Profissional</title>
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#162032" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -37,12 +35,11 @@
 </div>
 
 <div id="appShell" class="app-shell hidden">
-  
-  <aside class="sidebar" id="sidebar">
+  <aside class="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-logo">
         <span class="logo-name">VLOZ</span>
-        <span class="logo-sub">Estoque Inteligente</span>
+        <span class="logo-sub">Estoque</span>
       </div>
     </div>
     <nav class="sidebar-nav">
@@ -54,12 +51,12 @@
     <div class="sidebar-footer">
       <div class="user-badge">
         <div class="user-avatar" id="sidebarAvatar">U</div>
-        <div>
+        <div class="user-info">
           <div class="user-name" id="sidebarUser">Usuário</div>
           <div class="user-role" id="sidebarRole">Carregando...</div>
         </div>
       </div>
-      <button class="btn-logout" onclick="App.logout()">Sair do Sistema</button>
+      <button class="btn-logout" onclick="App.logout()">Sair</button>
     </div>
   </aside>
 
@@ -68,88 +65,70 @@
       <div class="topbar-title" id="topbarTitle">Dashboard</div>
       <div class="topbar-actions">
         <div class="stock-indicators">
-          <div class="stock-ind">
-            <span class="ind-dot dot-danger"></span>
-            <span class="ind-val" id="indZeradoVal">0</span>
-          </div>
-          <div class="stock-ind">
-            <span class="ind-dot dot-warn"></span>
-            <span class="ind-val" id="indBaixoVal">0</span>
-          </div>
+          <div class="stock-ind"><span class="ind-dot dot-danger"></span> <span id="indZeradoVal">0</span></div>
+          <div class="stock-ind"><span class="ind-dot dot-warn"></span> <span id="indBaixoVal">0</span></div>
         </div>
       </div>
     </header>
 
     <section id="page-produtos" class="page">
       <div class="page-header">
-        <h1>Gestão de Materiais</h1>
+        <h1>Produtos</h1>
         <button class="btn-primary" onclick="App.openModalProduto()">+ Novo Produto</button>
       </div>
       <div class="filters-bar">
-        <input type="text" id="searchProdutos" placeholder="Buscar por SKU ou Nome..." oninput="App.renderProdutos()" />
-        <select id="filterCategoria" onchange="App.renderProdutos()">
-          <option value="">Todas Categorias</option>
-        </select>
+        <input type="text" id="searchProdutos" placeholder="Buscar SKU ou Nome..." oninput="App.renderProdutos()" />
       </div>
       <div class="table-wrap">
         <table class="data-table">
           <thead>
             <tr>
-              <th>SKU / CÓDIGO</th>
-              <th>DESCRIÇÃO</th>
+              <th>SKU</th>
+              <th>NOME</th>
               <th>CATEGORIA</th>
-              <th>QTD</th>
-              <th>STATUS</th>
+              <th>ESTOQUE</th>
               <th>AÇÕES</th>
             </tr>
           </thead>
-          <tbody id="tabelaProdutosBody">
-            </tbody>
+          <tbody id="tabelaProdutosBody"></tbody>
         </table>
       </div>
     </section>
+  </main>
+</div>
 
-    <div id="modalProduto" class="modal-overlay hidden">
-      <div class="modal">
-        <div class="modal-header">
-          <h2 id="modalProdutoTitle">Cadastrar Material</h2>
-          <button onclick="App.closeModal('modalProduto')">✕</button>
+<div id="modalProduto" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Cadastrar Material</h2>
+      <button onclick="App.closeModal('modalProduto')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Nome do Produto</label>
+          <input type="text" id="prodNome" />
         </div>
-        <div class="modal-body">
-          <input type="hidden" id="prodId" />
-          <div class="form-grid">
-            <div class="form-group">
-              <label>Categoria (Define o SKU)</label>
-              <select id="prodCategoria" required>
-                <option value="">Selecione para gerar código...</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Código Gerado</label>
-              <input type="text" id="prodCodigo" readonly style="background:#f0f0f0" />
-            </div>
-            <div class="form-group full">
-              <label>Nome do Produto</label>
-              <input type="text" id="prodNome" placeholder="Ex: Roteador AC1200" />
-            </div>
-            <div class="form-group">
-              <label>Quantidade Inicial</label>
-              <input type="number" id="prodQtd" value="0" />
-            </div>
-            <div class="form-group">
-              <label>Estoque Mínimo</label>
-              <input type="number" id="prodQtdMin" value="5" />
-            </div>
-          </div>
+        <div class="form-group">
+          <label>Categoria (Gera o SKU)</label>
+          <select id="prodCategoria" onchange="App.handleCategoriaChange()">
+            <option value="">Selecione...</option>
+            <option value="Rede">Rede</option>
+            <option value="Equipamentos">Equipamentos</option>
+            <option value="Cabos">Cabos</option>
+            <option value="Ferramentas">Ferramentas</option>
+          </select>
         </div>
-        <div class="modal-footer">
-          <button class="btn-outline" onclick="App.closeModal('modalProduto')">Cancelar</button>
-          <button class="btn-primary" onclick="App.salvarProduto()">Confirmar Registro</button>
+        <div class="form-group">
+          <label>SKU Gerado</label>
+          <input type="text" id="prodCodigo" readonly style="background:#f0f2f5" />
         </div>
       </div>
     </div>
-
-  </main>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="App.salvarProduto()">Salvar</button>
+    </div>
+  </div>
 </div>
 
 <div id="toast" class="toast hidden"></div>

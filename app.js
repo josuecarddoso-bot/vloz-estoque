@@ -3,7 +3,7 @@
  * Atualização: Código automático por categoria
  */
 
-import {
+ import {
   COLECOES,
   salvarDoc,
   excluirDoc,
@@ -84,14 +84,13 @@ const App = (() => {
     setTimeout(() => {
       const select = document.getElementById('prodCategoria');
 
-      select.onchange = () => {
-        const categoriaId = select.value;
-        if (!categoriaId) return;
+select.addEventListener('change', () => {
+  const categoriaId = select.value;
+  if (!categoriaId) return;
 
-        const codigo = gerarCodigoPorCategoria(categoriaId, state.produtos);
-        document.getElementById('prodCodigo').value = codigo;
-      };
-    }, 100);
+  const codigo = gerarCodigoPorCategoria(categoriaId, state.produtos);
+  document.getElementById('prodCodigo').value = codigo;
+});
 
     document.getElementById('modalProduto').classList.remove('hidden');
   }

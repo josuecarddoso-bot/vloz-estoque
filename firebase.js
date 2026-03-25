@@ -32,13 +32,13 @@ import {
    Em produção, use variáveis de ambiente via Vercel ou similar.
    ─────────────────────────────────────────────────────────────── */
 const firebaseConfig = {
-  apiKey:            "SUBSTITUA_SUA_API_KEY",
-  authDomain:        "SEU_PROJETO.firebaseapp.com",
-  databaseURL:       "https://SEU_PROJETO-default-rtdb.firebaseio.com",
-  projectId:         "SEU_PROJETO",
-  storageBucket:     "SEU_PROJETO.firebasestorage.app",
-  messagingSenderId: "SEU_SENDER_ID",
-  appId:             "SEU_APP_ID",
+  apiKey: "AIzaSyC6mdmwhOIhRnsX1Q2JxLRL2Kh7xXOSJB0",
+  authDomain: "vloz-estoque.firebaseapp.com",
+  databaseURL: "https://vloz-estoque-default-rtdb.firebaseio.com",
+  projectId: "vloz-estoque",
+  storageBucket: "vloz-estoque.firebasestorage.app",
+  messagingSenderId: "79794241039",
+  appId: "1:79794241039:web:1cdf606d09828517296d7a"
 };
 
 /* ── 2. INICIALIZAÇÃO ─────────────────────────────────────────── */

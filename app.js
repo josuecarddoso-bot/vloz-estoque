@@ -1,158 +1,129 @@
 /**
  * VLOZ TELECOM — SISTEMA DE ESTOQUE v3.0
- * Professional Architecture & Security Update
+ * Lógica de Negócio, Segurança e SKUs por Categoria
  */
 
- import {
-  COLECOES,
-  salvarDoc,
-  excluirDoc,
-  escutarColecao,
-} from "./firebase.js";
+ import { COLECOES, salvarDoc, excluirDoc, escutarColecao } from "./firebase.js";
 
-const App = (() => {
-  let state = {
-      user: null, // Perfil logado: { nome, role: 'admin' | 'tecnico' }
-      produtos: [],
-      categorias: [],
-      historico: [],
-      paginaAtual: 'dashboard'
-  };
-
-  // Mapeamento de Prefixos Profissionais
-  const PREFIXOS_CATEGORIA = {
-      'Rede': 'RED',
-      'Equipamentos': 'EQU',
-      'Cabos': 'CAB',
-      'Ferramentas': 'FER',
-      'Escritório': 'ESC',
-      'Infraestrutura': 'INF'
-  };
-
-  /**
-   * Geração de SKU Inteligente
-   * @param {string} categoriaId 
-   */
-  function gerarSKU(categoriaId) {
-      const cat = state.categorias.find(c => c.id === categoriaId);
-      const prefixo = PREFIXOS_CATEGORIA[cat?.nome] || 'GEN';
-      
-      const produtosDaCat = state.produtos.filter(p => p.categoriaId === categoriaId);
-      const proximoNumero = (produtosDaCat.length + 1).toString().padStart(3, '0');
-      
-      return `${prefixo}-${proximoNumero}`;
-  }
-
-  /**
-   * Controle de Acesso (RBAC)
-   * Verifica se o usuário tem permissão de administrador
-   */
-  function isAdmin() {
-      return state.user && state.user.role === 'admin';
-  }
-
-  /**
-   * Renderização da Tabela com Trava de Segurança
-   */
-  function renderProdutos() {
-      const tbody = document.getElementById('tabelaProdutosBody');
-      if (!tbody) return;
-
-      tbody.innerHTML = state.produtos.map(p => {
-          const cat = state.categorias.find(c => c.id === p.categoriaId);
-          
-          // Lógica do botão de deletar: Apenas Admin vê/pode clicar
-          const deleteBtn = isAdmin() 
-              ? `<button class="btn-icon danger" onclick="App.deletarProduto('${p.id}')" title="Excluir">🗑</button>`
-              : `<button class="btn-icon" style="opacity:0.3; cursor:not-allowed" title="Apenas administradores">🔒</button>`;
-
-          return `
-              <tr class="${p.qtd <= 0 ? 'row-zero' : (p.qtd <= p.qtdMin ? 'row-warn' : '')}">
-                  <td><strong>${p.codigo}</strong></td>
-                  <td>${p.nome}</td>
-                  <td><span class="page-sub">${cat ? cat.nome : 'Sem Categoria'}</span></td>
-                  <td><span class="ind-val">${p.qtd}</span> ${p.unidade}</td>
-                  <td>${p.qtdMin}</td>
-                  <td><span class="tag-status tag-${p.status}">${p.status}</span></td>
-                  <td>
-                      <div class="topbar-actions">
-                          <button class="btn-icon" onclick="App.editarProduto('${p.id}')">✏️</button>
-                          ${deleteBtn}
-                      </div>
-                  </td>
-              </tr>
-          `;
-      }).join('');
-  }
-
-  /**
-   * Registro de Saída com Justificativa Obrigatória
-   */
-  async function registrarSaida() {
-      const prodId = document.getElementById('saidaProduto').value;
-      const qtdSaida = Number(document.getElementById('saidaQtd').value);
-      const motivo = document.getElementById('saidaMotivo').value;
-      const obs = document.getElementById('saidaObs').value;
-
-      if (!prodId || qtdSaida <= 0 || !motivo) {
-          App.showToast('Preencha todos os campos obrigatórios!', 'error');
-          return;
-      }
-
-      const produto = state.produtos.find(p => p.id === prodId);
-      if (produto.qtd < qtdSaida) {
-          App.showToast('Estoque insuficiente!', 'error');
-          return;
-      }
-
-      const novaQtd = produto.qtd - qtdSaida;
-
-      // Grava no histórico com o nome do usuário responsável
-      const movimento = {
-          id: 'mov_' + Date.now(),
-          produtoId: prodId,
-          produtoNome: produto.nome,
-          tipo: 'saida',
-          quantidade: qtdSaida,
-          usuario: state.user.nome,
-          motivo: motivo,
-          justificativa: obs,
-          data: new Date().toISOString()
-      };
-
-      try {
-          await salvarDoc(COLECOES.produtos, { ...produto, qtd: novaQtd });
-          await salvarDoc(COLECOES.historico, movimento);
-          App.showToast('Baixa realizada com sucesso!');
-          App.navigate('dashboard');
-      } catch (e) {
-          console.error(e);
-          App.showToast('Erro ao processar saída', 'error');
-      }
-  }
-
-  return {
-      init: () => {
-          // Mock de sessão para teste (isso virá do Firebase Auth no futuro)
-          state.user = { nome: "Técnico Vloz", role: "tecnico" }; 
-          
-          escutarColecao(COLECOES.produtos, (docs) => {
-              state.produtos = docs;
-              renderProdutos();
-          });
-          escutarColecao(COLECOES.categorias, (docs) => {
-              state.categorias = docs;
-          });
-      },
-      deletarProduto: async (id) => {
-          if (!isAdmin()) return App.showToast("Acesso Negado!", "error");
-          if (confirm("Deseja realmente excluir este produto?")) {
-              await excluirDoc(COLECOES.produtos, id);
-              App.showToast("Removido.");
-          }
-      },
-      // ... outras funções (navigate, showToast)
-  };
-})();
-
-document.addEventListener('DOMContentLoaded', App.init);
+ const App = (() => {
+     // Estado interno do sistema
+     let state = {
+         user: { nome: "Josué", role: "admin" }, // Role: 'admin' ou 'tecnico'
+         produtos: [],
+         categorias: [
+             { id: "cat1", nome: "Rede", prefixo: "RED" },
+             { id: "cat2", nome: "Equipamentos", prefixo: "EQU" },
+             { id: "cat3", nome: "Cabos", prefixo: "CAB" },
+             { id: "cat4", nome: "Ferramentas", prefixo: "FER" }
+         ]
+     };
+ 
+     /**
+      * Geração Automática de SKU por Categoria
+      */
+     function handleCategoriaChange() {
+         const catNome = document.getElementById('prodCategoria').value;
+         const catObj = state.categorias.find(c => c.nome === catNome);
+         const prefixo = catObj ? catObj.prefixo : "GEN";
+         
+         // Conta quantos produtos já existem nessa categoria
+         const totalNaCat = state.produtos.filter(p => p.categoria === catNome).length;
+         const novoCodigo = `${prefixo}-${(totalNaCat + 1).toString().padStart(3, '0')}`;
+         
+         document.getElementById('prodCodigo').value = novoCodigo;
+     }
+ 
+     /**
+      * Renderização da Tabela com Trava de Segurança (RBAC)
+      */
+     function renderProdutos() {
+         const tbody = document.getElementById('tabelaProdutosBody');
+         if (!tbody) return;
+ 
+         tbody.innerHTML = state.produtos.map(p => `
+             <tr>
+                 <td><strong style="color:var(--navy)">${p.codigo}</strong></td>
+                 <td>${p.nome}</td>
+                 <td><span style="font-size: 12px; color: #64748b;">${p.categoria}</span></td>
+                 <td><strong>${p.qtd}</strong></td>
+                 <td>
+                     <div style="display: flex; gap: 8px;">
+                         ${state.user.role === 'admin' 
+                             ? `<button onclick="App.deletar('${p.id}')" style="cursor:pointer; border:none; background:none;">🗑️</button>` 
+                             : '<span title="Apenas administradores">🔒</span>'}
+                     </div>
+                 </td>
+             </tr>
+         `).join('');
+     }
+ 
+     // Funções Públicas Expostas para o HTML
+     return {
+         init: () => {
+             escutarColecao(COLECOES.produtos, (docs) => {
+                 state.produtos = docs;
+                 renderProdutos();
+             });
+         },
+ 
+         login: () => {
+             // Lógica simples de transição de tela
+             document.getElementById('loginScreen').classList.add('hidden');
+             document.getElementById('appShell').classList.remove('hidden');
+             App.init();
+         },
+ 
+         logout: () => {
+             location.reload();
+         },
+ 
+         navigate: (page) => {
+             console.log("Navegando para:", page);
+             // Lógica de troca de abas pode ser inserida aqui
+         },
+ 
+         openModalProduto: () => {
+             document.getElementById('modalProduto').classList.remove('hidden');
+         },
+ 
+         closeModal: (id) => {
+             document.getElementById(id).classList.add('hidden');
+         },
+ 
+         handleCategoriaChange,
+ 
+         salvarProduto: async () => {
+             const nome = document.getElementById('prodNome').value;
+             const categoria = document.getElementById('prodCategoria').value;
+             const codigo = document.getElementById('prodCodigo').value;
+ 
+             if (!nome || !categoria) return alert("Preencha os campos!");
+ 
+             const novoDoc = {
+                 nome,
+                 categoria,
+                 codigo,
+                 qtd: 0,
+                 dataCriacao: new Date().toISOString()
+             };
+ 
+             await salvarDoc(COLECOES.produtos, novoDoc);
+             App.closeModal('modalProduto');
+         },
+ 
+         deletar: async (id) => {
+             if (state.user.role !== 'admin') return;
+             if (confirm("Tem certeza que deseja excluir este item?")) {
+                 await excluirDoc(COLECOES.produtos, id);
+             }
+         }
+     };
+ })();
+ 
+ /**
+  * EXPORTAÇÃO GLOBAL (CORREÇÃO DO ERRO)
+  * Torna o objeto App disponível para os eventos 'onclick' do HTML
+  */
+ window.App = App; 
+ 
+ export default App;

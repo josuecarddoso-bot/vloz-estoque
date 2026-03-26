@@ -624,106 +624,121 @@ textarea { resize: vertical; }
   .sc-icon-wrap { width: 36px; height: 36px; border-radius: 10px; font-size: 1rem; }
 }
 
-/* ══ CATEGORY CHART — progress bars profissionais ═════════════ */
-.cat-chart-wrap {
+/* ══ ESTOQUE POR CATEGORIA — página dedicada ══════════════════ */
+.ecat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.ecat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  width: 100%;
-  padding-top: 4px;
+  gap: 14px;
+  transition: box-shadow .15s, transform .15s;
+}
+.ecat-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-1px);
 }
 
-.cat-chart-row {
-  display: grid;
-  grid-template-columns: 1fr 2fr 36px 34px;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  padding: 6px 4px;
-  transition: background .12s;
-}
-.cat-chart-row:hover { background: var(--bg); }
-
-.cat-chart-meta {
+/* Topo do card */
+.ecat-card-top {
   display: flex;
   align-items: center;
-  gap: 6px;
-  min-width: 0;
-  overflow: hidden;
+  gap: 12px;
 }
-.cat-chart-icon { font-size: .95rem; flex-shrink: 0; }
-.cat-chart-nome {
-  font-size: .82rem;
-  font-weight: 500;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.ecat-icon-wrap {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; flex-shrink: 0;
 }
-.cat-chart-badge {
-  font-size: .65rem;
-  color: var(--text3);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 1px 6px;
-  flex-shrink: 0;
-  white-space: nowrap;
+.ecat-info { flex: 1; min-width: 0; }
+.ecat-nome {
+  font-weight: 600; font-size: .95rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.ecat-grupo {
+  font-size: .72rem; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .05em; margin-top: 2px;
+}
+.ecat-total-wrap { text-align: right; flex-shrink: 0; }
+.ecat-total-val  {
+  font-size: 1.6rem; font-weight: 800;
+  font-family: 'DM Mono', monospace; line-height: 1;
+}
+.ecat-total-label { font-size: .68rem; color: var(--text3); margin-top: 2px; }
 
-.cat-chart-bar-wrap {
-  height: 8px;
+/* Barra de progresso */
+.ecat-bar-row {
+  display: flex; align-items: center; gap: 10px;
+}
+.ecat-bar-track {
+  flex: 1; height: 6px;
   background: var(--bg);
   border-radius: 20px;
   overflow: hidden;
   border: 1px solid var(--border);
 }
-.cat-chart-bar {
-  height: 100%;
-  border-radius: 20px;
-  transition: width .5s cubic-bezier(.4,0,.2,1);
+.ecat-bar-fill {
+  height: 100%; border-radius: 20px;
+  transition: width .6s cubic-bezier(.4,0,.2,1);
   min-width: 4px;
 }
+.ecat-pct-label {
+  font-size: .72rem; color: var(--text3);
+  font-family: 'DM Mono', monospace;
+  flex-shrink: 0; white-space: nowrap;
+}
 
-.cat-chart-qtd {
+/* Badges de status */
+.ecat-status-row {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.ecat-badge {
+  font-size: .68rem; font-weight: 700;
+  padding: 2px 8px; border-radius: 20px;
+  letter-spacing: .03em;
+}
+.ecat-ok     { background: var(--ok-lt);     color: var(--ok-dk);   border: 1px solid #b6dcc0; }
+.ecat-warn   { background: var(--warn-lt);   color: var(--warn-dk); border: 1px solid #fde68a; }
+.ecat-danger { background: var(--danger-lt); color: var(--danger);  border: 1px solid #fca5a5; }
+
+/* Lista de produtos do card */
+.ecat-prods { border-top: 1px solid var(--border); padding-top: 12px; }
+.ecat-prods-header {
+  font-size: .72rem; font-weight: 600; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px;
+}
+.ecat-prod-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 0; border-bottom: 1px solid var(--bg);
   font-size: .82rem;
-  font-weight: 700;
-  font-family: 'DM Mono', monospace;
-  text-align: right;
-  flex-shrink: 0;
 }
-.cat-chart-pct {
-  font-size: .72rem;
-  color: var(--text3);
-  text-align: right;
-  flex-shrink: 0;
-  font-family: 'DM Mono', monospace;
+.ecat-prod-row:last-of-type { border-bottom: none; }
+.ecat-prod-nome {
+  color: var(--text2); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; max-width: 80%;
 }
+.ecat-prod-qtd {
+  font-family: 'DM Mono', monospace; font-weight: 700;
+  font-size: .82rem; flex-shrink: 0;
+}
+.ecat-prods-mais {
+  margin-top: 8px; font-size: .78rem;
+  color: var(--ok-dk); cursor: pointer;
+  font-weight: 500;
+}
+.ecat-prods-mais:hover { text-decoration: underline; }
 
-.cat-chart-toggle {
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 7px 14px;
-  font-size: .8rem;
-  color: var(--text2);
-  cursor: pointer;
-  font-family: inherit;
-  transition: all .15s;
-  margin-top: 2px;
-  width: 100%;
-  text-align: center;
-}
-.cat-chart-toggle:hover {
-  background: var(--bg);
-  border-color: var(--sage);
-  color: var(--ok-dk);
-}
-
-/* Ajuste: remover height fixo do bar-chart quando usado para cat-chart */
-#dashChart {
-  height: auto !important;
-  overflow: visible !important;
+/* Responsive */
+@media (max-width: 640px) {
+  .ecat-grid { grid-template-columns: 1fr; }
 }
 

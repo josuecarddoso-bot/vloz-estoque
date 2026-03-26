@@ -72,6 +72,9 @@
       <button class="nav-item" data-page="historico" onclick="App.navigate('historico')">
         <span class="nav-icon">≡</span><span>Histórico</span>
       </button>
+      <button class="nav-item" data-page="estoque-cat" onclick="App.navigate('estoque-cat')">
+        <span class="nav-icon">▤</span><span>Estoque por Cat.</span>
+      </button>
       <button class="nav-item" data-page="categorias" onclick="App.navigate('categorias')">
         <span class="nav-icon">◧</span><span>Categorias</span>
       </button>
@@ -179,12 +182,7 @@
         </div>
       </div>
 
-      <div class="card mt">
-        <div class="card-header">
-          <h3>Distribuição por Categoria</h3>
-        </div>
-        <div id="dashChart"></div>
-      </div>
+
     </section>
 
     <!-- ── PRODUTOS ───────────────────────────── -->
@@ -380,6 +378,15 @@
       <div class="card">
         <div id="movRecentesPageList" class="mov-list mov-list-lg"></div>
       </div>
+    </section>
+
+    <!-- ── ESTOQUE POR CATEGORIA ────────────────── -->
+    <section id="page-estoque-cat" class="page">
+      <div class="page-header">
+        <h1>Estoque por Categoria</h1>
+        <p class="page-sub" id="estoqueCatSub"></p>
+      </div>
+      <div id="estoqueCatGrid" class="ecat-grid"></div>
     </section>
 
     <!-- ── CATEGORIAS ─────────────────────────── -->

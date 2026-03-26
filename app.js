@@ -476,23 +476,56 @@ const App = (() => {
       }
     }
 
-    // Gráfico de barras por categoria
+    // Gráfico de categorias — progress bars compactas
     const chartEl = document.getElementById('dashChart');
-    if (chartEl && state.categorias.length) {
-      const maxQtd = Math.max(...state.categorias.map(c =>
-        state.produtos.filter(p => p.categoriaId === c.id).reduce((s, p) => s + (p.qtd || 0), 0)
-      ), 1);
+    if (chartEl) {
+      const dados = state.categorias.map(c => {
+        const qtd   = state.produtos.filter(p => p.categoriaId === c.id).reduce((s, p) => s + (p.qtd || 0), 0);
+        const prods = state.produtos.filter(p => p.categoriaId === c.id).length;
+        return { ...c, qtd, prods };
+      }).sort((a, b) => b.qtd - a.qtd);
 
-      chartEl.innerHTML = state.categorias.map(c => {
-        const qtd = state.produtos.filter(p => p.categoriaId === c.id).reduce((s, p) => s + (p.qtd || 0), 0);
-        const h   = Math.max(Math.round((qtd / maxQtd) * 130), qtd > 0 ? 4 : 2);
-        return `
-          <div class="bar-col">
-            <span class="bar-count">${qtd}</span>
-            <div class="bar" style="height:${h}px;background:var(--sage)"></div>
-            <span class="bar-label">${c.icone || '📦'} ${c.nome}</span>
+      const maxQtd  = Math.max(...dados.map(d => d.qtd), 1);
+      const LIMITE  = 4; // quantas aparecem por padrão
+
+      const renderCatChart = (expandido) => {
+        const lista = expandido ? dados : dados.slice(0, LIMITE);
+        const total = dados.reduce((s, d) => s + d.qtd, 0);
+        const temMais = dados.length > LIMITE;
+
+        chartEl.innerHTML = `
+          <div class="cat-chart-wrap">
+            ${lista.map((c, i) => {
+              const pct  = Math.round((c.qtd / maxQtd) * 100);
+              const pctTotal = total > 0 ? Math.round((c.qtd / total) * 100) : 0;
+              const cores = ['var(--sage)','#5b8fff','#f5a623','#e5484d','#8b5cf6','#06b6d4','#10b981','#f59e0b'];
+              const cor = cores[i % cores.length];
+              return `
+                <div class="cat-chart-row" onclick="App.navigate('produtos')" title="Ver produtos: ${c.nome}">
+                  <div class="cat-chart-meta">
+                    <span class="cat-chart-icon">${c.icone || '📦'}</span>
+                    <span class="cat-chart-nome">${c.nome}</span>
+                    <span class="cat-chart-badge">${c.prods} prod.</span>
+                  </div>
+                  <div class="cat-chart-bar-wrap">
+                    <div class="cat-chart-bar" style="width:${pct}%;background:${cor}"></div>
+                  </div>
+                  <span class="cat-chart-qtd" style="color:${cor}">${c.qtd}</span>
+                  <span class="cat-chart-pct">${pctTotal}%</span>
+                </div>`;
+            }).join('')}
+            ${temMais ? `
+              <button class="cat-chart-toggle" onclick="event.stopPropagation();App._catChartExpandido=!App._catChartExpandido;App._renderCatChart()">
+                ${expandido
+                  ? '↑ Ver menos'
+                  : `↓ Ver mais ${dados.length - LIMITE} categorias`}
+              </button>` : ''}
           </div>`;
-      }).join('');
+      };
+
+      App._catChartExpandido = App._catChartExpandido || false;
+      App._renderCatChart    = () => renderCatChart(App._catChartExpandido);
+      renderCatChart(App._catChartExpandido);
     }
 
     atualizarIndicadoresTopbar();
@@ -1288,16 +1321,7 @@ const App = (() => {
     }).join('');
   }
 
-  /* ────────────────────────────────────────────────────────────
-     CHART — toggle expand/compact
-  ──────────────────────────────────────────────────────────── */
-  function toggleChartExpand() {
-    const chart  = document.getElementById('dashChart');
-    const btn    = document.getElementById('btnChartExpand');
-    if (!chart) return;
-    const expanded = chart.classList.toggle('expanded');
-    if (btn) btn.textContent = expanded ? 'Ver menos ↑' : 'Ver mais ↓';
-  }
+  /* toggleChartExpand: substituída por App._renderCatChart inline no renderDashboard */
 
   function init() {
     renderFraseLogin();
@@ -1335,8 +1359,7 @@ const App = (() => {
     exportarProdutosCSV, exportarHistoricoCSV, exportarBackup, importarBackup,
     // Modal genérico
     closeModal, closeModalOutside,
-    // Dashboard extras
-    toggleChartExpand,
+    // Dashboard extras (toggleChartExpand substituído por _renderCatChart inline)
   };
 
 })();

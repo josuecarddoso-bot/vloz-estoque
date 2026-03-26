@@ -315,6 +315,7 @@ const App = (() => {
       dashboard:    'Dashboard',
       produtos:     'Produtos',
       movimentacao: 'Movimentação',
+      movrecentes:  'Movimentações Recentes',
       historico:    'Histórico',
       categorias:   'Categorias',
       usuarios:     'Usuários',
@@ -329,6 +330,7 @@ const App = (() => {
       dashboard:    renderDashboard,
       produtos:     renderProdutos,
       movimentacao: renderMovimentacao,
+      movrecentes:  renderMovRecentes,
       historico:    renderHistorico,
       categorias:   renderCategorias,
       usuarios:     renderUsuarios,
@@ -377,8 +379,9 @@ const App = (() => {
     state.unsubscribers.push(
       escutarColecao(COLECOES.historico, lista => {
         state.historico = lista.sort((a, b) => new Date(b.data) - new Date(a.data));
-        if (state.paginaAtual === 'historico') renderHistorico();
-        if (state.paginaAtual === 'dashboard') renderDashboard();
+        if (state.paginaAtual === 'historico')    renderHistorico();
+        if (state.paginaAtual === 'movrecentes')  renderMovRecentes();
+        if (state.paginaAtual === 'dashboard')    renderDashboard();
       })
     );
   }
@@ -449,27 +452,7 @@ const App = (() => {
     document.getElementById('statSaidas').textContent   = saidas;
     document.getElementById('statAlertas').textContent  = alertas.length;
 
-    // Movimentações recentes
-    const movEl = document.getElementById('dashMovRecentes');
-    if (movEl) {
-      const recentes = state.historico.slice(0, 8);
-      if (!recentes.length) {
-        movEl.innerHTML = '<div class="empty-state"><div class="empty-icon">⇄</div>Nenhuma movimentação ainda</div>';
-      } else {
-        movEl.innerHTML = recentes.map(h => {
-          const sinal = h.tipo === 'entrada' ? '+' : '-';
-          return `
-            <div class="mov-item">
-              <span class="mov-badge badge-${h.tipo}">${h.tipo}</span>
-              <div class="mov-info">
-                <div class="mov-name">${h.nomeProduto || '—'}</div>
-                <div class="mov-meta">${dataFormatada(h.data)} · ${h.usuario || '—'}</div>
-              </div>
-              <span class="mov-qty">${sinal}${h.qtd}</span>
-            </div>`;
-        }).join('');
-      }
-    }
+    // Movimentações recentes: removido do dashboard — agora é página própria na sidebar
 
     // Alertas
     const alertEl = document.getElementById('dashAlertas');
@@ -1275,6 +1258,47 @@ const App = (() => {
   /* ────────────────────────────────────────────────────────────
      INIT
   ──────────────────────────────────────────────────────────── */
+
+  /* ────────────────────────────────────────────────────────────
+     MOV RECENTES — página dedicada
+  ──────────────────────────────────────────────────────────── */
+  function renderMovRecentes() {
+    const listEl = document.getElementById('movRecentesPageList');
+    if (!listEl) return;
+
+    const recentes = state.historico.slice(0, 50);
+
+    if (!recentes.length) {
+      listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">⇄</div>Nenhuma movimentação registrada ainda</div>';
+      return;
+    }
+
+    listEl.innerHTML = recentes.map(h => {
+      const sinal = h.tipo === 'entrada' ? '+' : '-';
+      return `
+        <div class="mov-item">
+          <span class="mov-badge badge-${h.tipo}">${h.tipo}</span>
+          <div class="mov-info">
+            <div class="mov-name">${h.nomeProduto || '—'}</div>
+            <div class="mov-meta">${dataFormatada(h.data)} · ${h.usuario || '—'} · ${h.perfil ? labelPerfil(h.perfil) : ''}</div>
+            ${h.detalhe ? `<div class="mov-meta" style="margin-top:2px;color:var(--text3)">${h.detalhe}</div>` : ''}
+          </div>
+          <span class="mov-qty" style="color:${h.tipo === 'entrada' ? 'var(--ok-dk)' : 'var(--warn-dk)'}">${h.tipo === 'entrada' ? '+' : '-'}${h.qtd}</span>
+        </div>`;
+    }).join('');
+  }
+
+  /* ────────────────────────────────────────────────────────────
+     CHART — toggle expand/compact
+  ──────────────────────────────────────────────────────────── */
+  function toggleChartExpand() {
+    const chart  = document.getElementById('dashChart');
+    const btn    = document.getElementById('btnChartExpand');
+    if (!chart) return;
+    const expanded = chart.classList.toggle('expanded');
+    if (btn) btn.textContent = expanded ? 'Ver menos ↑' : 'Ver mais ↓';
+  }
+
   function init() {
     renderFraseLogin();
 
@@ -1311,6 +1335,8 @@ const App = (() => {
     exportarProdutosCSV, exportarHistoricoCSV, exportarBackup, importarBackup,
     // Modal genérico
     closeModal, closeModalOutside,
+    // Dashboard extras
+    toggleChartExpand,
   };
 
 })();

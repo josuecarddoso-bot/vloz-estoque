@@ -317,6 +317,7 @@ const App = (() => {
       movimentacao: 'Movimentação',
       movrecentes:  'Movimentações Recentes',
       historico:    'Histórico',
+      'estoque-cat': 'Estoque por Categoria',
       categorias:   'Categorias',
       usuarios:     'Usuários',
       exportar:     'Exportar & Backup',
@@ -327,13 +328,14 @@ const App = (() => {
 
     // Renderiza a página
     const renders = {
-      dashboard:    renderDashboard,
-      produtos:     renderProdutos,
-      movimentacao: renderMovimentacao,
-      movrecentes:  renderMovRecentes,
-      historico:    renderHistorico,
-      categorias:   renderCategorias,
-      usuarios:     renderUsuarios,
+      dashboard:      renderDashboard,
+      produtos:       renderProdutos,
+      movimentacao:   renderMovimentacao,
+      movrecentes:    renderMovRecentes,
+      historico:      renderHistorico,
+      'estoque-cat':  renderEstoqueCat,
+      categorias:     renderCategorias,
+      usuarios:       renderUsuarios,
     };
     if (renders[pagina]) renders[pagina]();
   }
@@ -354,8 +356,9 @@ const App = (() => {
       escutarColecao(COLECOES.produtos, lista => {
         state.produtos = lista;
         atualizarIndicadoresTopbar();
-        if (state.paginaAtual === 'produtos')   renderProdutos();
-        if (state.paginaAtual === 'dashboard')  renderDashboard();
+        if (state.paginaAtual === 'produtos')      renderProdutos();
+        if (state.paginaAtual === 'dashboard')     renderDashboard();
+        if (state.paginaAtual === 'estoque-cat')   renderEstoqueCat();
         populateSelects();
       })
     );
@@ -476,57 +479,7 @@ const App = (() => {
       }
     }
 
-    // Gráfico de categorias — progress bars compactas
-    const chartEl = document.getElementById('dashChart');
-    if (chartEl) {
-      const dados = state.categorias.map(c => {
-        const qtd   = state.produtos.filter(p => p.categoriaId === c.id).reduce((s, p) => s + (p.qtd || 0), 0);
-        const prods = state.produtos.filter(p => p.categoriaId === c.id).length;
-        return { ...c, qtd, prods };
-      }).sort((a, b) => b.qtd - a.qtd);
-
-      const maxQtd  = Math.max(...dados.map(d => d.qtd), 1);
-      const LIMITE  = 4; // quantas aparecem por padrão
-
-      const renderCatChart = (expandido) => {
-        const lista = expandido ? dados : dados.slice(0, LIMITE);
-        const total = dados.reduce((s, d) => s + d.qtd, 0);
-        const temMais = dados.length > LIMITE;
-
-        chartEl.innerHTML = `
-          <div class="cat-chart-wrap">
-            ${lista.map((c, i) => {
-              const pct  = Math.round((c.qtd / maxQtd) * 100);
-              const pctTotal = total > 0 ? Math.round((c.qtd / total) * 100) : 0;
-              const cores = ['var(--sage)','#5b8fff','#f5a623','#e5484d','#8b5cf6','#06b6d4','#10b981','#f59e0b'];
-              const cor = cores[i % cores.length];
-              return `
-                <div class="cat-chart-row" onclick="App.navigate('produtos')" title="Ver produtos: ${c.nome}">
-                  <div class="cat-chart-meta">
-                    <span class="cat-chart-icon">${c.icone || '📦'}</span>
-                    <span class="cat-chart-nome">${c.nome}</span>
-                    <span class="cat-chart-badge">${c.prods} prod.</span>
-                  </div>
-                  <div class="cat-chart-bar-wrap">
-                    <div class="cat-chart-bar" style="width:${pct}%;background:${cor}"></div>
-                  </div>
-                  <span class="cat-chart-qtd" style="color:${cor}">${c.qtd}</span>
-                  <span class="cat-chart-pct">${pctTotal}%</span>
-                </div>`;
-            }).join('')}
-            ${temMais ? `
-              <button class="cat-chart-toggle" onclick="event.stopPropagation();App._catChartExpandido=!App._catChartExpandido;App._renderCatChart()">
-                ${expandido
-                  ? '↑ Ver menos'
-                  : `↓ Ver mais ${dados.length - LIMITE} categorias`}
-              </button>` : ''}
-          </div>`;
-      };
-
-      App._catChartExpandido = App._catChartExpandido || false;
-      App._renderCatChart    = () => renderCatChart(App._catChartExpandido);
-      renderCatChart(App._catChartExpandido);
-    }
+    // Distribuição por categoria: movida para página própria (estoque-cat)
 
     atualizarIndicadoresTopbar();
   }
@@ -1019,6 +972,105 @@ const App = (() => {
   /* ────────────────────────────────────────────────────────────
      CATEGORIAS
   ──────────────────────────────────────────────────────────── */
+
+  /* ────────────────────────────────────────────────────────────
+     ESTOQUE POR CATEGORIA — página dedicada e completa
+  ──────────────────────────────────────────────────────────── */
+  function renderEstoqueCat() {
+    const grid  = document.getElementById('estoqueCatGrid');
+    const sub   = document.getElementById('estoqueCatSub');
+    if (!grid) return;
+
+    const CORES = [
+      '#5a9e6a','#5b8fff','#f5a623','#8b5cf6',
+      '#06b6d4','#e5484d','#10b981','#f59e0b',
+      '#ec4899','#0ea5e9','#84cc16','#a855f7',
+    ];
+
+    const dados = state.categorias.map((c, i) => {
+      const prods   = state.produtos.filter(p => p.categoriaId === c.id);
+      const qtdTotal = prods.reduce((s, p) => s + (p.qtd || 0), 0);
+      const zerados  = prods.filter(p => p.qtd <= 0).length;
+      const baixos   = prods.filter(p => p.qtd > 0 && p.qtd < (p.qtdMin || 0)).length;
+      const ok       = prods.filter(p => p.qtd >= (p.qtdMin || 0) && p.qtd > 0).length;
+      const cor      = CORES[i % CORES.length];
+      return { ...c, prods, qtdTotal, zerados, baixos, ok, cor, nProds: prods.length };
+    }).sort((a, b) => b.qtdTotal - a.qtdTotal);
+
+    const totalItens = dados.reduce((s, d) => s + d.qtdTotal, 0);
+    const totalProds = dados.reduce((s, d) => s + d.nProds, 0);
+    const maxQtd     = Math.max(...dados.map(d => d.qtdTotal), 1);
+
+    if (sub) {
+      sub.textContent = `${totalProds} produto${totalProds !== 1 ? 's' : ''} · ${totalItens} itens em estoque`;
+    }
+
+    if (!dados.length) {
+      grid.innerHTML = '<div class="empty-state"><div class="empty-icon">◧</div>Nenhuma categoria cadastrada</div>';
+      return;
+    }
+
+    grid.innerHTML = dados.map(d => {
+      const pctBar     = Math.round((d.qtdTotal / maxQtd) * 100);
+      const pctTotal   = totalItens > 0 ? ((d.qtdTotal / totalItens) * 100).toFixed(1) : '0.0';
+      const statusHtml = [
+        d.zerados ? `<span class="ecat-badge ecat-danger">✕ ${d.zerados} zerado${d.zerados > 1 ? 's' : ''}</span>` : '',
+        d.baixos  ? `<span class="ecat-badge ecat-warn">▲ ${d.baixos} baixo${d.baixos > 1 ? 's' : ''}</span>`    : '',
+        d.ok      ? `<span class="ecat-badge ecat-ok">● ${d.ok} ok</span>`                                        : '',
+      ].filter(Boolean).join('');
+
+      const prodRows = d.prods
+        .sort((a, b) => a.qtd - b.qtd)
+        .slice(0, 5)
+        .map(p => {
+          const zero = p.qtd <= 0;
+          const warn = !zero && p.qtd < (p.qtdMin || 0);
+          const cor2 = zero ? 'var(--danger)' : warn ? 'var(--warn-dk)' : 'var(--ok-dk)';
+          return `
+            <div class="ecat-prod-row">
+              <span class="ecat-prod-nome">${p.nome}</span>
+              <span class="ecat-prod-qtd" style="color:${cor2}">${p.qtd}</span>
+            </div>`;
+        }).join('');
+
+      const temMais = d.prods.length > 5;
+
+      return `
+        <div class="ecat-card">
+          <div class="ecat-card-top">
+            <div class="ecat-icon-wrap" style="background:${d.cor}22;color:${d.cor}">
+              ${d.icone || '📦'}
+            </div>
+            <div class="ecat-info">
+              <div class="ecat-nome">${d.nome}</div>
+              <div class="ecat-grupo">${d.grupo || '—'}</div>
+            </div>
+            <div class="ecat-total-wrap">
+              <div class="ecat-total-val" style="color:${d.cor}">${d.qtdTotal}</div>
+              <div class="ecat-total-label">itens</div>
+            </div>
+          </div>
+
+          <div class="ecat-bar-row">
+            <div class="ecat-bar-track">
+              <div class="ecat-bar-fill" style="width:${pctBar}%;background:${d.cor}"></div>
+            </div>
+            <span class="ecat-pct-label">${pctTotal}% do total</span>
+          </div>
+
+          <div class="ecat-status-row">${statusHtml || '<span class="ecat-badge ecat-ok">Sem produtos</span>'}</div>
+
+          ${d.prods.length > 0 ? `
+          <div class="ecat-prods">
+            <div class="ecat-prods-header">Produtos em destaque</div>
+            ${prodRows}
+            ${temMais ? `<div class="ecat-prods-mais" onclick="App.navigate('produtos')"
+              >+ ${d.prods.length - 5} produto${d.prods.length - 5 > 1 ? 's' : ''} · Ver todos →</div>` : ''}
+          </div>` : ''}
+        </div>`;
+    }).join('');
+  }
+
   function renderCategorias() {
     const grid = document.getElementById('categoriasGrid');
     if (!grid) return;
@@ -1359,7 +1411,8 @@ const App = (() => {
     exportarProdutosCSV, exportarHistoricoCSV, exportarBackup, importarBackup,
     // Modal genérico
     closeModal, closeModalOutside,
-    // Dashboard extras (toggleChartExpand substituído por _renderCatChart inline)
+    // Dashboard extras
+    renderEstoqueCat,
   };
 
 })();

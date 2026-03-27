@@ -802,3 +802,77 @@ textarea { resize: vertical; }
   white-space: nowrap;
 }
 
+/* ══ DEPARTAMENTOS — separadores na tabela de produtos ════════ */
+
+/* Linha separadora de departamento na tabela */
+tr.depto-separator td {
+  padding: 6px 0 2px;
+  border-bottom: none;
+  background: transparent !important;
+}
+tr.depto-separator:first-child td { padding-top: 0; }
+
+.depto-sep-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  margin: 0 0 2px;
+}
+.depto-sep-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+.depto-sep-nome {
+  font-size: .78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  flex: 1;
+}
+.depto-sep-count {
+  font-size: .72rem;
+  color: var(--text3);
+  font-family: 'DM Mono', monospace;
+  flex-shrink: 0;
+}
+
+/* Hover na linha do separador — não ativar */
+tr.depto-separator:hover td {
+  background: transparent !important;
+}
+
+/* ══ DEPARTAMENTOS — na página de Categorias ══════════════════ */
+
+/* Header de departamento acima do grid de cards */
+.cat-depto-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  margin: 20px 0 10px;
+  font-size: .85rem;
+}
+.cat-depto-header:first-child { margin-top: 0; }
+
+/* Grid de cards dentro de cada seção de departamento */
+.cat-depto-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+/* Badge de departamento no filtro — highlight quando ativo */
+#filterDepto option { font-size: .85rem; }
+
+/* ══ TABELA — colspan 8 (adicionamos coluna) ══════════════════ */
+/* Garante que o empty-state funcione com colspan 8 */
+.data-table tbody tr td[colspan="8"] {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text3);
+}
+

@@ -51,6 +51,19 @@ const CORES_PREFIXO = {
   VLZ: { bg: '#f0fdf4', color: '#15803d' },
 };
 
+/** Departamentos — nível superior às categorias */
+const DEPARTAMENTOS = [
+  { id: 'rede',        nome: 'Infraestrutura de Rede', icone: '🔧', cor: '#162032', corLt: '#e8edf5' },
+  { id: 'fisica',      nome: 'Infraestrutura Física',  icone: '🏗️', cor: '#c2410c', corLt: '#fff7ed' },
+  { id: 'ferramentas', nome: 'Ferramentas',             icone: '🔨', cor: '#334155', corLt: '#f1f5f9' },
+  { id: 'ti',          nome: 'TI / Escritório',         icone: '🖥️', cor: '#6d28d9', corLt: '#ede9fe' },
+  { id: 'facilities',  nome: 'Facilities / Limpeza',   icone: '🧹', cor: '#065f46', corLt: '#d1fae5' },
+];
+
+function getDepto(id) {
+  return DEPARTAMENTOS.find(d => d.id === id) || { id: '', nome: 'Geral', icone: '📦', cor: '#8a95a8', corLt: '#f1f5f9' };
+}
+
 /** Permissões por perfil */
 const PERMISSOES = {
   admin: {
@@ -393,17 +406,28 @@ const App = (() => {
      POPULATE SELECTS (produtos, categorias)
   ──────────────────────────────────────────────────────────── */
   function populateSelects() {
-    // Selects de categoria
+    // Selects de categoria (com suporte a cascata de departamento)
     ['prodCategoria', 'filterCategoria'].forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
       const cur = el.value;
+
+      // Filtra categorias pelo departamento selecionado (só para filterCategoria)
+      const deptoSel = id === 'filterCategoria'
+        ? (document.getElementById('filterDepto')?.value || '')
+        : '';
+
       if (id === 'filterCategoria') {
         el.innerHTML = '<option value="">Todas as categorias</option>';
       } else {
         el.innerHTML = '<option value="">Selecione a categoria…</option>';
       }
-      state.categorias.forEach(c => {
+
+      const lista = deptoSel
+        ? state.categorias.filter(c => (c.grupo || '') === deptoSel)
+        : state.categorias;
+
+      lista.forEach(c => {
         const opt = document.createElement('option');
         opt.value = c.id;
         opt.textContent = c.nome;
@@ -433,6 +457,18 @@ const App = (() => {
   /* ────────────────────────────────────────────────────────────
      DASHBOARD
   ──────────────────────────────────────────────────────────── */
+
+  /* ────────────────────────────────────────────────────────────
+     DEPARTAMENTO — cascata filtro depto → categoria
+  ──────────────────────────────────────────────────────────── */
+  function onFiltroDeptoChange() {
+    // Reseta categoria ao trocar departamento
+    const filtCat = document.getElementById('filterCategoria');
+    if (filtCat) filtCat.value = '';
+    populateSelects();  // repopula categorias filtradas
+    renderProdutos();
+  }
+
   function renderDashboard() {
     // Data de hoje
     const dashDate = document.getElementById('dashDate');
@@ -507,24 +543,26 @@ const App = (() => {
      PRODUTOS
   ──────────────────────────────────────────────────────────── */
   function renderProdutos() {
-    const search  = (document.getElementById('searchProdutos')?.value || '').toLowerCase();
-    const filtCat = document.getElementById('filterCategoria')?.value || '';
-    const filtSt  = document.getElementById('filterStatus')?.value   || '';
+    const search    = (document.getElementById('searchProdutos')?.value || '').toLowerCase();
+    const filtDepto = document.getElementById('filterDepto')?.value    || '';
+    const filtCat   = document.getElementById('filterCategoria')?.value || '';
+    const filtSt    = document.getElementById('filterStatus')?.value   || '';
 
     let lista = state.produtos.filter(p => {
-      const matchSearch = !search || p.nome.toLowerCase().includes(search) || (p.codigo || '').toLowerCase().includes(search);
-      const matchCat    = !filtCat || p.categoriaId === filtCat;
-      const matchSt     = !filtSt  || p.status === filtSt;
-      return matchSearch && matchCat && matchSt;
+      const cat         = state.categorias.find(c => c.id === p.categoriaId);
+      const deptoId     = cat?.grupo || '';
+      const matchSearch = !search    || p.nome.toLowerCase().includes(search) || (p.codigo || '').toLowerCase().includes(search);
+      const matchDepto  = !filtDepto || deptoId === filtDepto;
+      const matchCat    = !filtCat   || p.categoriaId === filtCat;
+      const matchSt     = !filtSt    || p.status === filtSt;
+      return matchSearch && matchDepto && matchCat && matchSt;
     });
-
-    lista = lista.sort((a, b) => a.nome.localeCompare(b.nome));
 
     const tbody = document.getElementById('tabelaProdutosBody');
     if (!tbody) return;
 
     if (!lista.length) {
-      tbody.innerHTML = `<tr><td colspan="7" class="empty-state">Nenhum produto encontrado</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><div class="empty-icon">▦</div>Nenhum produto encontrado</td></tr>`;
       return;
     }
 
@@ -532,34 +570,80 @@ const App = (() => {
     const podeEdit  = podeF('editarProduto');
     const podeBaixa = podeF('darBaixaProduto');
 
-    tbody.innerHTML = lista.map(p => {
-      const zero = p.qtd <= 0;
-      const warn = !zero && p.qtd < (p.qtdMin || 0);
-      const rowClass = zero ? 'row-zero' : (warn ? 'row-warn' : '');
-      const stockBadge = zero
-        ? `<span class="stock-zero">${p.qtd}</span>`
-        : warn
-          ? `<span class="stock-warn">${p.qtd}</span>`
-          : `<span class="stock-ok">${p.qtd}</span>`;
+    // Agrupar por departamento
+    const grupos = {};
+    lista.forEach(p => {
+      const cat    = state.categorias.find(c => c.id === p.categoriaId);
+      const deptoId = cat?.grupo || '';
+      if (!grupos[deptoId]) grupos[deptoId] = [];
+      grupos[deptoId].push(p);
+    });
 
-      const acoes = `
-        ${podeEdit  ? `<button class="btn-icon" onclick="App.editarProduto('${p.id}')" title="Editar">✏</button>` : ''}
-        ${podeBaixa ? `<button class="btn-icon" onclick="App.abrirModalBaixa('${p.id}')" title="Registrar baixa">↑</button>` : ''}
-        ${podeDel   ? `<button class="btn-icon danger" onclick="App.deletarProduto('${p.id}')" title="Excluir produto">🗑</button>` : ''}
-      `.trim();
+    // Ordenar produtos dentro de cada grupo por nome
+    Object.values(grupos).forEach(g => g.sort((a, b) => a.nome.localeCompare(b.nome)));
 
-      return `
-        <tr class="${rowClass}">
-          <td><span style="font-family:'DM Mono',monospace;font-size:.85rem">${badgePrefixo(p.codigo)} ${p.codigo || '—'}</span></td>
-          <td><strong>${p.nome}</strong>${p.descricao ? `<div style="font-size:.75rem;color:var(--text3);margin-top:2px">${p.descricao.slice(0, 60)}${p.descricao.length > 60 ? '…' : ''}</div>` : ''}</td>
-          <td>${p.marca ? `<span class="marca-tag">${p.marca}</span>` : '<span style="color:var(--text3);font-size:.8rem">—</span>'}</td>
-          <td>${nomeCat(p.categoriaId) || '—'}</td>
-          <td>${stockBadge}</td>
-          <td style="font-family:'DM Mono',monospace;font-size:.85rem;color:var(--text3)">${p.qtdMin || 0}</td>
-          <td><span class="tag-status tag-${p.status || 'novo'}">${p.status || 'novo'}</span></td>
-          <td><div style="display:flex;gap:4px">${acoes || '<span style="color:var(--text3);font-size:.78rem">—</span>'}</div></td>
+    // Ordenar grupos: departamentos conhecidos primeiro, 'Geral' por último
+    const ordemDepto = DEPARTAMENTOS.map(d => d.id);
+    const gruposOrdenados = Object.keys(grupos).sort((a, b) => {
+      const ia = ordemDepto.indexOf(a);
+      const ib = ordemDepto.indexOf(b);
+      if (ia === -1 && ib === -1) return 0;
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    });
+
+    let html = '';
+    gruposOrdenados.forEach(deptoId => {
+      const depto    = getDepto(deptoId);
+      const produtos = grupos[deptoId];
+
+      // Linha separadora de departamento
+      html += `
+        <tr class="depto-separator">
+          <td colspan="8">
+            <div class="depto-sep-inner" style="border-left:3px solid ${depto.cor};background:${depto.corLt}">
+              <span class="depto-sep-icon">${depto.icone}</span>
+              <span class="depto-sep-nome" style="color:${depto.cor}">${depto.nome}</span>
+              <span class="depto-sep-count">${produtos.length} produto${produtos.length !== 1 ? 's' : ''}</span>
+            </div>
+          </td>
         </tr>`;
-    }).join('');
+
+      produtos.forEach(p => {
+        const zero = p.qtd <= 0;
+        const warn = !zero && p.qtd < (p.qtdMin || 0);
+        const rowClass = zero ? 'row-zero' : (warn ? 'row-warn' : '');
+        const stockBadge = zero
+          ? `<span class="stock-zero">${p.qtd}</span>`
+          : warn
+            ? `<span class="stock-warn">${p.qtd}</span>`
+            : `<span class="stock-ok">${p.qtd}</span>`;
+
+        const acoes = [
+          podeEdit  ? `<button class="btn-icon" onclick="App.editarProduto('${p.id}')" title="Editar">✏</button>` : '',
+          podeBaixa ? `<button class="btn-icon" onclick="App.abrirModalBaixa('${p.id}')" title="Registrar baixa">↑</button>` : '',
+          podeDel   ? `<button class="btn-icon danger" onclick="App.deletarProduto('${p.id}')" title="Excluir produto">🗑</button>` : '',
+        ].filter(Boolean).join('');
+
+        html += `
+          <tr class="${rowClass}">
+            <td><span style="font-family:'DM Mono',monospace;font-size:.85rem">${badgePrefixo(p.codigo)} ${p.codigo || '—'}</span></td>
+            <td>
+              <strong>${p.nome}</strong>
+              ${p.descricao ? `<div style="font-size:.75rem;color:var(--text3);margin-top:2px">${p.descricao.slice(0,60)}${p.descricao.length>60?'…':''}</div>` : ''}
+            </td>
+            <td>${p.marca ? `<span class="marca-tag">${p.marca}</span>` : '<span style="color:var(--text3);font-size:.8rem">—</span>'}</td>
+            <td style="font-size:.82rem;color:var(--text2)">${nomeCat(p.categoriaId) || '—'}</td>
+            <td>${stockBadge}</td>
+            <td style="font-family:'DM Mono',monospace;font-size:.85rem;color:var(--text3)">${p.qtdMin || 0}</td>
+            <td><span class="tag-status tag-${p.status || 'novo'}">${p.status || 'novo'}</span></td>
+            <td><div style="display:flex;gap:4px">${acoes || '<span style="color:var(--text3);font-size:.78rem">—</span>'}</div></td>
+          </tr>`;
+      });
+    });
+
+    tbody.innerHTML = html;
   }
 
   /* ── Modal Produto ── */
@@ -1139,25 +1223,54 @@ const App = (() => {
     const podeDel  = podeF('gerenciarCats');
     const podeEdit = podeF('gerenciarCats');
 
-    grid.innerHTML = state.categorias.map(c => {
-      const count   = state.produtos.filter(p => p.categoriaId === c.id).length;
-      const prefixo = getPrefixoPorCategoria(c.id);
-      const cor     = CORES_PREFIXO[prefixo] || { bg: '#f1f5f9', color: '#334155' };
-      return `
-        <div class="cat-card">
-          <div class="cat-icon">${c.icone || '📦'}</div>
-          <div class="cat-name">${c.nome}</div>
-          <div style="display:flex;align-items:center;gap:6px;margin-top:2px">
-            <div class="cat-group">${c.grupo || '—'}</div>
-            <span style="background:${cor.bg};color:${cor.color};padding:1px 7px;border-radius:20px;font-size:.65rem;font-weight:700;font-family:'DM Mono',monospace">${prefixo}</span>
-          </div>
-          <div class="cat-count">${count} produto${count !== 1 ? 's' : ''}</div>
-          <div class="cat-actions">
-            ${podeEdit ? `<button class="btn-icon" onclick="App.editarCategoria('${c.id}')" title="Editar">✏</button>` : ''}
-            ${podeDel  ? `<button class="btn-icon danger" onclick="App.deletarCategoria('${c.id}')" title="Excluir">🗑</button>` : ''}
-          </div>
-        </div>`;
-    }).join('');
+    // Agrupar categorias por departamento
+    const grupos = {};
+    state.categorias.forEach(c => {
+      const deptoId = c.grupo || '';
+      if (!grupos[deptoId]) grupos[deptoId] = [];
+      grupos[deptoId].push(c);
+    });
+    const ordemDepto = DEPARTAMENTOS.map(d => d.id);
+    const gruposOrdenados = Object.keys(grupos).sort((a,b) => {
+      const ia = ordemDepto.indexOf(a), ib = ordemDepto.indexOf(b);
+      if (ia===-1 && ib===-1) return 0; if (ia===-1) return 1; if (ib===-1) return -1;
+      return ia - ib;
+    });
+
+    let htmlCat = '';
+    gruposOrdenados.forEach(deptoId => {
+      const depto = getDepto(deptoId);
+      htmlCat += `
+        <div class="cat-depto-header" style="border-left:3px solid ${depto.cor};background:${depto.corLt}">
+          <span>${depto.icone}</span>
+          <span style="color:${depto.cor};font-weight:700;font-size:.85rem">${depto.nome}</span>
+          <span style="color:${depto.cor};opacity:.6;font-size:.75rem">${grupos[deptoId].length} categoria${grupos[deptoId].length!==1?'s':''}</span>
+        </div>
+        <div class="cat-depto-grid">`;
+
+      grupos[deptoId].forEach(c => {
+        const count   = state.produtos.filter(p => p.categoriaId === c.id).length;
+        const prefixo = getPrefixoPorCategoria(c.id);
+        const corPre  = CORES_PREFIXO[prefixo] || { bg: '#f1f5f9', color: '#334155' };
+        htmlCat += `
+          <div class="cat-card">
+            <div class="cat-icon">${c.icone || '📦'}</div>
+            <div class="cat-name">${c.nome}</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:2px">
+              <span style="background:${corPre.bg};color:${corPre.color};padding:1px 7px;border-radius:20px;font-size:.65rem;font-weight:700;font-family:'DM Mono',monospace">${prefixo}</span>
+            </div>
+            <div class="cat-count">${count} produto${count !== 1 ? 's' : ''}</div>
+            <div class="cat-actions">
+              ${podeEdit ? `<button class="btn-icon" onclick="App.editarCategoria('${c.id}')" title="Editar">✏</button>` : ''}
+              ${podeDel  ? `<button class="btn-icon danger" onclick="App.deletarCategoria('${c.id}')" title="Excluir">🗑</button>` : ''}
+            </div>
+          </div>`;
+      });
+
+      htmlCat += `</div>`;
+    });
+
+    grid.innerHTML = htmlCat;
   }
 
   async function salvarCategoria() {
@@ -1453,6 +1566,8 @@ const App = (() => {
     salvarProduto, editarProduto, deletarProduto,
     abrirModalBaixa, selecionarMarca,
     renderProdutos,
+    // Departamento
+    onFiltroDeptoChange,
     // Movimentação
     renderMovimentacao,
     switchMovTab, selecionarMotivo,

@@ -552,6 +552,7 @@ const App = (() => {
         <tr class="${rowClass}">
           <td><span style="font-family:'DM Mono',monospace;font-size:.85rem">${badgePrefixo(p.codigo)} ${p.codigo || '—'}</span></td>
           <td><strong>${p.nome}</strong>${p.descricao ? `<div style="font-size:.75rem;color:var(--text3);margin-top:2px">${p.descricao.slice(0, 60)}${p.descricao.length > 60 ? '…' : ''}</div>` : ''}</td>
+          <td>${p.marca ? `<span class="marca-tag">${p.marca}</span>` : '<span style="color:var(--text3);font-size:.8rem">—</span>'}</td>
           <td>${nomeCat(p.categoriaId) || '—'}</td>
           <td>${stockBadge}</td>
           <td style="font-family:'DM Mono',monospace;font-size:.85rem;color:var(--text3)">${p.qtdMin || 0}</td>
@@ -562,6 +563,31 @@ const App = (() => {
   }
 
   /* ── Modal Produto ── */
+
+  /* ────────────────────────────────────────────────────────────
+     MARCA — seleção por botão com opção customizada
+  ──────────────────────────────────────────────────────────── */
+  function selecionarMarca(btn) {
+    // Remove seleção anterior
+    document.querySelectorAll('.marca-btn').forEach(b => b.classList.remove('ativa'));
+    btn.classList.add('ativa');
+
+    const val    = btn.dataset.marca;
+    const custom = document.getElementById('prodMarcaCustom');
+
+    if (val === '__outro') {
+      // Abre campo livre e limpa hidden
+      custom.classList.remove('hidden');
+      custom.focus();
+      document.getElementById('prodMarca').value = custom.value.trim();
+    } else {
+      // Marca da lista — esconde campo livre
+      custom.classList.add('hidden');
+      custom.value = '';
+      document.getElementById('prodMarca').value = val;
+    }
+  }
+
   function openModalProduto(id = null) {
     if (id) {
       if (!podeF('editarProduto')) { toast('Sem permissão para editar produto', 'error'); return; }
@@ -580,6 +606,10 @@ const App = (() => {
     document.getElementById('prodQtdMin').value     = '5';
     document.getElementById('prodStatus').value     = 'novo';
     document.getElementById('prodDescricao').value  = '';
+    document.getElementById('prodMarca').value       = '';
+    document.getElementById('prodMarcaCustom').value = '';
+    document.getElementById('prodMarcaCustom').classList.add('hidden');
+    document.querySelectorAll('.marca-btn').forEach(b => b.classList.remove('ativa'));
 
     populateSelects();
 
@@ -612,6 +642,29 @@ const App = (() => {
 
     populateSelects();
     document.getElementById('prodCategoria').value = p.categoriaId || '';
+
+    // Restaurar seleção de marca
+    const marcaVal = p.marca || '';
+    const MARCAS_LISTA = ['Intelbras','TP-Link','Huawei','Mikrotik','Ubiquiti',
+                          'Draytek','HP','Cisco','D-Link','Furukawa','Datacom'];
+    document.getElementById('prodMarca').value = marcaVal;
+    document.querySelectorAll('.marca-btn').forEach(b => b.classList.remove('ativa'));
+    if (marcaVal && MARCAS_LISTA.includes(marcaVal)) {
+      const btn = document.querySelector(`.marca-btn[data-marca="${marcaVal}"]`);
+      if (btn) btn.classList.add('ativa');
+      document.getElementById('prodMarcaCustom').classList.add('hidden');
+      document.getElementById('prodMarcaCustom').value = '';
+    } else if (marcaVal) {
+      // Marca customizada
+      const btnOutro = document.querySelector('.marca-btn[data-marca="__outro"]');
+      if (btnOutro) btnOutro.classList.add('ativa');
+      document.getElementById('prodMarcaCustom').classList.remove('hidden');
+      document.getElementById('prodMarcaCustom').value = marcaVal;
+    } else {
+      document.getElementById('prodMarcaCustom').classList.add('hidden');
+      document.getElementById('prodMarcaCustom').value = '';
+    }
+
     openModal('modalProduto');
   }
 
@@ -631,8 +684,11 @@ const App = (() => {
     const jaExiste = state.produtos.find(p => p.codigo === codigo && p.id !== id);
     if (jaExiste) { toast('Código já está em uso por outro produto', 'error'); return; }
 
+    const marcaRaw = document.getElementById('prodMarca').value.trim();
+
     const dados = {
       nome, codigo, categoriaId,
+      marca:     marcaRaw || '',
       unidade:   document.getElementById('prodUnidade').value,
       qtd:       Number(document.getElementById('prodQtd').value)    || 0,
       qtdMin:    Number(document.getElementById('prodQtdMin').value)  || 0,
@@ -1395,7 +1451,7 @@ const App = (() => {
     // Produtos
     openModal, openModalProduto,
     salvarProduto, editarProduto, deletarProduto,
-    abrirModalBaixa,
+    abrirModalBaixa, selecionarMarca,
     renderProdutos,
     // Movimentação
     renderMovimentacao,

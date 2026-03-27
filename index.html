@@ -218,6 +218,7 @@
             <tr>
               <th>Código</th>
               <th>Nome</th>
+              <th>Marca</th>
               <th>Categoria</th>
               <th>Qtd</th>
               <th>Mín</th>
@@ -475,6 +476,29 @@
           <label>Nome *</label>
           <input type="text" id="prodNome" placeholder="Nome do produto" />
         </div>
+
+        <div class="form-group full">
+          <label>Marca</label>
+          <div class="marca-selector" id="marcaSelector">
+            <button type="button" class="marca-btn" data-marca="Intelbras"  onclick="App.selecionarMarca(this)">Intelbras</button>
+            <button type="button" class="marca-btn" data-marca="TP-Link"    onclick="App.selecionarMarca(this)">TP-Link</button>
+            <button type="button" class="marca-btn" data-marca="Huawei"     onclick="App.selecionarMarca(this)">Huawei</button>
+            <button type="button" class="marca-btn" data-marca="Mikrotik"   onclick="App.selecionarMarca(this)">Mikrotik</button>
+            <button type="button" class="marca-btn" data-marca="Ubiquiti"   onclick="App.selecionarMarca(this)">Ubiquiti</button>
+            <button type="button" class="marca-btn" data-marca="Draytek"    onclick="App.selecionarMarca(this)">Draytek</button>
+            <button type="button" class="marca-btn" data-marca="HP"         onclick="App.selecionarMarca(this)">HP</button>
+            <button type="button" class="marca-btn" data-marca="Cisco"      onclick="App.selecionarMarca(this)">Cisco</button>
+            <button type="button" class="marca-btn" data-marca="D-Link"     onclick="App.selecionarMarca(this)">D-Link</button>
+            <button type="button" class="marca-btn" data-marca="Furukawa"   onclick="App.selecionarMarca(this)">Furukawa</button>
+            <button type="button" class="marca-btn" data-marca="Datacom"    onclick="App.selecionarMarca(this)">Datacom</button>
+            <button type="button" class="marca-btn marca-btn-outro" data-marca="__outro" onclick="App.selecionarMarca(this)">✏ Outra…</button>
+          </div>
+          <input type="hidden" id="prodMarca" />
+          <input type="text"   id="prodMarcaCustom" placeholder="Digite o nome da marca…"
+                 class="hidden" style="margin-top:8px"
+                 oninput="document.getElementById('prodMarca').value=this.value.trim()" />
+        </div>
+
         <div class="form-group">
           <label>Unidade</label>
           <select id="prodUnidade">

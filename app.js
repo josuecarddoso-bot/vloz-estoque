@@ -213,10 +213,20 @@ const App = (() => {
     if (el) el.textContent = FRASES_LOGIN[Math.floor(Math.random() * FRASES_LOGIN.length)];
   }
 
+  let _loginTentativas = 0;
+  let _loginBloqueadoAte = 0;
+
   function login() {
     const loginVal = document.getElementById('loginUser').value.trim();
     const senhaVal = document.getElementById('loginPass').value;
     const errEl    = document.getElementById('loginError');
+
+    if (Date.now() < _loginBloqueadoAte) {
+      const seg = Math.ceil((_loginBloqueadoAte - Date.now()) / 1000);
+      errEl.textContent = `Muitas tentativas. Aguarde ${seg}s.`;
+      errEl.classList.remove('hidden');
+      return;
+    }
 
     if (!loginVal || !senhaVal) {
       errEl.textContent = 'Preencha usuário e senha.';
@@ -224,7 +234,7 @@ const App = (() => {
       return;
     }
 
-    // Administrador padrão (fallback local para bootstrap)
+    // ⚠️ CREDENCIAL BOOTSTRAP — remova antes de colocar em produção pública.
     const admPadrao = { id: 'admin_default', nome: 'Administrador', login: 'admin', senha: 'vloz2024', perfil: 'admin' };
     const todos = [...state.usuarios, admPadrao];
     const usuario = todos.find(u => u.login === loginVal && u.senha === senhaVal);
@@ -238,6 +248,7 @@ const App = (() => {
     errEl.classList.add('hidden');
     state.sessao = { id: usuario.id, nome: usuario.nome, login: usuario.login, perfil: usuario.perfil || 'almoxarife' };
 
+    _loginTentativas = 0; _loginBloqueadoAte = 0;
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('appShell').classList.remove('hidden');
 
@@ -247,6 +258,7 @@ const App = (() => {
   }
 
   function logout() {
+    if (!confirm('Confirmar saída do sistema?')) return;
     state.sessao = null;
     document.getElementById('appShell').classList.add('hidden');
     document.getElementById('loginScreen').classList.remove('hidden');
@@ -470,6 +482,20 @@ const App = (() => {
   }
 
   function renderDashboard() {
+    // Skeleton enquanto Firebase não respondeu
+    if (!state.produtos.length && !state.historico.length) {
+      document.querySelectorAll('.sc-val').forEach(el => {
+        el.classList.add('skeleton');
+        el.style.minWidth = '40px'; el.style.minHeight = '28px';
+        el.textContent = '';
+      });
+    } else {
+      document.querySelectorAll('.sc-val').forEach(el => {
+        el.classList.remove('skeleton');
+        el.style.minWidth = ''; el.style.minHeight = '';
+      });
+    }
+
     // Data de hoje
     const dashDate = document.getElementById('dashDate');
     if (dashDate) {
@@ -562,7 +588,10 @@ const App = (() => {
     if (!tbody) return;
 
     if (!lista.length) {
-      tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><div class="empty-icon">▦</div>Nenhum produto encontrado</td></tr>`;
+      const _msgVazia = state.produtos.length === 0
+        ? '<div class="empty-icon">⬜</div><strong>Nenhum produto cadastrado</strong><p>Clique em "+ Novo Produto" para começar</p>'
+        : '<div class="empty-icon">🔍</div><strong>Nenhum resultado</strong><p>Ajuste os filtros de busca</p>';
+      tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">${_msgVazia}</div></td></tr>`;
       return;
     }
 
@@ -752,7 +781,16 @@ const App = (() => {
     openModal('modalProduto');
   }
 
+  let _salvandoProduto = false;
   async function salvarProduto() {
+    if (_salvandoProduto) return;
+    _salvandoProduto = true;
+    const _btnSalvar = document.querySelector('#modalProduto .btn-primary');
+    if (_btnSalvar) _btnSalvar.classList.add('btn-loading');
+    const _releaseSalvar = () => {
+      _salvandoProduto = false;
+      if (_btnSalvar) _btnSalvar.classList.remove('btn-loading');
+    };
     const id         = document.getElementById('prodId').value;
     const nome       = document.getElementById('prodNome').value.trim();
     const categoriaId = document.getElementById('prodCategoria').value;
@@ -799,9 +837,11 @@ const App = (() => {
         await salvarDoc(COLECOES.produtos, novo);
         toast('Produto cadastrado com sucesso');
       }
+      _releaseSalvar();
       closeModal('modalProduto');
     } catch (e) {
       console.error(e);
+      _releaseSalvar();
       toast('Erro ao salvar produto. Tente novamente.', 'error');
     }
   }

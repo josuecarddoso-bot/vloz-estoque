@@ -194,6 +194,14 @@
 
       <div class="filters-bar">
         <input type="text" id="searchProdutos" placeholder="Buscar por nome ou código…" oninput="App.renderProdutos()" />
+        <select id="filterDepto" onchange="App.onFiltroDeptoChange()">
+          <option value="">Todos os departamentos</option>
+          <option value="rede">🔧 Infraestrutura de Rede</option>
+          <option value="fisica">🏗️ Infraestrutura Física</option>
+          <option value="ferramentas">🔨 Ferramentas</option>
+          <option value="ti">🖥️ TI / Escritório</option>
+          <option value="facilities">🧹 Facilities / Limpeza</option>
+        </select>
         <select id="filterCategoria" onchange="App.renderProdutos()">
           <option value="">Todas as categorias</option>
         </select>
@@ -560,14 +568,18 @@
           <input type="text" id="catIcone" placeholder="📦" maxlength="4" />
         </div>
         <div class="form-group full">
-          <label>Grupo</label>
+          <label>Departamento *</label>
           <select id="catGrupo">
-            <option value="Rede / Provedor">Rede / Provedor</option>
-            <option value="Escritório">Escritório</option>
-            <option value="Limpeza">Limpeza</option>
-            <option value="Ferramentas">Ferramentas</option>
-            <option value="Outro">Outro</option>
+            <option value="">Selecione o departamento…</option>
+            <option value="rede">🔧 Infraestrutura de Rede</option>
+            <option value="fisica">🏗️ Infraestrutura Física</option>
+            <option value="ferramentas">🔨 Ferramentas</option>
+            <option value="ti">🖥️ TI / Escritório</option>
+            <option value="facilities">🧹 Facilities / Limpeza</option>
           </select>
+          <div style="margin-top:6px;font-size:.75rem;color:var(--text3)">
+            Define em qual setor este tipo de produto é utilizado
+          </div>
         </div>
       </div>
       <div style="background:var(--bg);border-radius:var(--radius-sm);padding:10px 14px;font-size:.8rem;color:var(--text3);margin-top:4px">

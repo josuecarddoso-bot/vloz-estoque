@@ -742,3 +742,63 @@ textarea { resize: vertical; }
   .ecat-grid { grid-template-columns: 1fr; }
 }
 
+/* ══ MARCA — seletor de botões no modal de produto ═══════════ */
+.marca-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.marca-btn {
+  padding: 5px 13px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  color: var(--text2);
+  font-size: .8rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.marca-btn:hover {
+  border-color: var(--navy);
+  color: var(--navy);
+  background: rgba(22,32,50,.05);
+}
+.marca-btn.ativa {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(22,32,50,.18);
+}
+.marca-btn-outro {
+  border-style: dashed;
+  color: var(--text3);
+}
+.marca-btn-outro:hover,
+.marca-btn-outro.ativa {
+  border-style: solid;
+  border-color: var(--sage-dark);
+  background: var(--sage-lt);
+  color: var(--ok-dk);
+}
+
+/* Badge de marca na tabela de produtos */
+.marca-tag {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: .72rem;
+  font-weight: 600;
+  background: rgba(22,32,50,.07);
+  color: var(--navy);
+  border: 1px solid rgba(22,32,50,.1);
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+

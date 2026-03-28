@@ -53,9 +53,14 @@ const CORES_PREFIXO = {
 
 /** Departamentos — nível superior às categorias */
 const DEPARTAMENTOS = [
-  { id: 'rede',        nome: 'Infraestrutura de Rede', icone: '🔧', cor: '#162032', corLt: '#e8edf5' },
-  { id: 'fisica',      nome: 'Infraestrutura Física',  icone: '🏗️', cor: '#c2410c', corLt: '#fff7ed' },
-  { id: 'ferramentas', nome: 'Ferramentas',             icone: '🔨', cor: '#334155', corLt: '#f1f5f9' },
+  // ── Operacional FTTH / ISP ──────────────────────────────────
+  { id: 'ftth',        nome: 'FTTH / Fibra Óptica',    icone: '💡', cor: '#0369a1', corLt: '#e0f2fe' },
+  { id: 'rede_ativa',  nome: 'Rede Ativa (CPE/OLT)',   icone: '📡', cor: '#162032', corLt: '#e8edf5' },
+  { id: 'wireless',    nome: 'Wireless / Rádio',        icone: '📶', cor: '#0891b2', corLt: '#e0f7ff' },
+  { id: 'infra',       nome: 'Infraestrutura Física',   icone: '🏗️', cor: '#c2410c', corLt: '#fff7ed' },
+  // ── Suporte e Manutenção ────────────────────────────────────
+  { id: 'ferramentas', nome: 'Ferramentas e Medição',  icone: '🔧', cor: '#334155', corLt: '#f1f5f9' },
+  // ── Administrativo / Interno ────────────────────────────────
   { id: 'ti',          nome: 'TI / Escritório',         icone: '🖥️', cor: '#6d28d9', corLt: '#ede9fe' },
   { id: 'facilities',  nome: 'Facilities / Limpeza',   icone: '🧹', cor: '#065f46', corLt: '#d1fae5' },
 ];
@@ -277,6 +282,30 @@ const App = (() => {
     if (avatarEl) avatarEl.textContent = nome.charAt(0).toUpperCase();
     if (nomeEl)   nomeEl.textContent   = nome;
     if (roleEl)   roleEl.textContent   = labelPerfil(perfil);
+
+    // Badge do usuário logado na topbar (nome + perfil)
+    const badgeEl = document.getElementById('badgeUsuarioLogado');
+    if (badgeEl) {
+      const corPerfil = {
+        admin:       { bg: '#162032', color: '#8FBD9A' },
+        almoxarife:  { bg: '#e8f4eb', color: '#065f46' },
+        tecnico:     { bg: '#e0f2fe', color: '#0369a1' },
+        visualizador:{ bg: '#f1f5f9', color: '#334155' },
+      }[perfil] || { bg: '#f1f5f9', color: '#334155' };
+
+      badgeEl.innerHTML = `
+        <div class="user-topbar-badge">
+          <div class="utb-avatar" style="background:${corPerfil.bg};color:${corPerfil.color}">
+            ${nome.charAt(0).toUpperCase()}
+          </div>
+          <div class="utb-info">
+            <span class="utb-nome">${nome}</span>
+            <span class="utb-perfil" style="background:${corPerfil.bg};color:${corPerfil.color}">
+              ${labelPerfil(perfil)}
+            </span>
+          </div>
+        </div>`;
+    }
 
     // Mostrar/ocultar itens de menu conforme perfil
     const navUsuarios = document.querySelector('[data-page="usuarios"]');
@@ -681,23 +710,38 @@ const App = (() => {
      MARCA — seleção por botão com opção customizada
   ──────────────────────────────────────────────────────────── */
   function selecionarMarca(btn) {
-    // Remove seleção anterior
-    document.querySelectorAll('.marca-btn').forEach(b => b.classList.remove('ativa'));
+    // Safari/Chrome Mac fix: garantir que o evento chegou ao elemento certo
+    if (!btn || !btn.dataset) return;
+
+    // Remove seleção anterior com forceReflow para Safari
+    document.querySelectorAll('.marca-btn').forEach(b => {
+      b.classList.remove('ativa');
+      b.setAttribute('aria-pressed', 'false');
+    });
+
     btn.classList.add('ativa');
+    btn.setAttribute('aria-pressed', 'true');
+
+    // Safari fix: forçar repaint após mudança de classe
+    void btn.offsetHeight;
 
     const val    = btn.dataset.marca;
+    const hidden = document.getElementById('prodMarca');
     const custom = document.getElementById('prodMarcaCustom');
 
+    if (!hidden || !custom) return;
+
     if (val === '__outro') {
-      // Abre campo livre e limpa hidden
       custom.classList.remove('hidden');
-      custom.focus();
-      document.getElementById('prodMarca').value = custom.value.trim();
+      custom.style.display = 'block'; // Safari ignora .hidden às vezes
+      // Pequeno delay para Safari renderizar antes de focar
+      setTimeout(() => custom.focus(), 50);
+      hidden.value = custom.value.trim();
     } else {
-      // Marca da lista — esconde campo livre
       custom.classList.add('hidden');
+      custom.style.display = '';
       custom.value = '';
-      document.getElementById('prodMarca').value = val;
+      hidden.value = val;
     }
   }
 

@@ -58,7 +58,10 @@ h2 { font-size: 1.2rem;  font-weight: 600; }
 h3 { font-size: 1rem;    font-weight: 500; }
 p  { color: var(--text2); font-size: .9rem; }
 
-.hidden { display: none !important; }
+.hidden {
+  display: none !important;
+  visibility: hidden !important; /* Safari fallback */
+}
 .mt     { margin-top: 20px; }
 
 /* ══ LOGIN ══════════════════════════════════════════════════════ */
@@ -399,7 +402,17 @@ p  { color: var(--text2); font-size: .9rem; }
 .filters-bar input, .filters-bar select { flex: 1 1 140px; min-width: 0; max-width: 260px; }
 
 /* ── TABLE ─── */
-.table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); box-shadow: var(--shadow); }
+.table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  /* Safari fix: conter overflow corretamente */
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  max-width: 100%;
+}
 .data-table { width: 100%; border-collapse: collapse; font-size: .875rem; }
 .data-table thead th {
   background: var(--navy); padding: 11px 14px; text-align: left;
@@ -429,6 +442,10 @@ p  { color: var(--text2); font-size: .9rem; }
   font-size: .875rem; font-weight: 500; cursor: pointer;
   border: 1px solid transparent; transition: all .15s;
   font-family: inherit; white-space: nowrap;
+  /* Safari/Mac fix */
+  -webkit-appearance: none; appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 .btn-primary { background: var(--navy); color: #fff; box-shadow: 0 1px 3px rgba(22,32,50,.25); }
 .btn-primary:hover  { background: var(--navy-dark); }
@@ -789,6 +806,13 @@ textarea { resize: vertical; }
   transition: all .15s;
   white-space: nowrap;
   line-height: 1.4;
+  /* Safari/Chrome Mac fix */
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .marca-btn:hover {
   border-color: var(--navy);
@@ -950,5 +974,64 @@ tr.depto-separator:hover td {
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
   .btn-loading::after { animation: none; content: '…'; border: none; }
+}
+
+/* ══ BADGE USUÁRIO LOGADO — topbar ═══════════════════════════ */
+.user-topbar-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  cursor: default;
+  transition: box-shadow .15s;
+  flex-shrink: 0;
+  max-width: 200px;
+  overflow: hidden;
+}
+.user-topbar-badge:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+.utb-avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .78rem; font-weight: 800;
+  flex-shrink: 0;
+  letter-spacing: 0;
+}
+.utb-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  overflow: hidden;
+}
+.utb-nome {
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+.utb-perfil {
+  font-size: .62rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  width: fit-content;
+}
+
+/* Ocultar nome em telas muito pequenas */
+@media (max-width: 600px) {
+  .utb-info  { display: none; }
+  .user-topbar-badge { padding: 4px; }
 }
 

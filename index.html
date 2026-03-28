@@ -104,8 +104,8 @@
       <button class="hamburger" onclick="App.toggleSidebar()">☰</button>
       <div class="topbar-title" id="topbarTitle">Dashboard</div>
       <div class="topbar-actions">
-        <!-- Badge perfil do usuário -->
-        <span id="badgePerfilHeader"></span>
+        <!-- Usuário logado — nome, perfil e avatar -->
+        <div id="badgeUsuarioLogado"></div>
 
         <!-- Indicadores de estoque -->
         <div class="stock-indicators" onclick="App.navigate('dashboard')" title="Ver alertas no Dashboard" style="cursor:pointer">
@@ -196,9 +196,11 @@
         <input type="text" id="searchProdutos" placeholder="Buscar por nome ou código…" oninput="App.renderProdutos()" />
         <select id="filterDepto" onchange="App.onFiltroDeptoChange()">
           <option value="">Todos os departamentos</option>
-          <option value="rede">🔧 Infraestrutura de Rede</option>
-          <option value="fisica">🏗️ Infraestrutura Física</option>
-          <option value="ferramentas">🔨 Ferramentas</option>
+          <option value="ftth">💡 FTTH / Fibra Óptica</option>
+          <option value="rede_ativa">📡 Rede Ativa (CPE/OLT)</option>
+          <option value="wireless">📶 Wireless / Rádio</option>
+          <option value="infra">🏗️ Infraestrutura Física</option>
+          <option value="ferramentas">🔧 Ferramentas e Medição</option>
           <option value="ti">🖥️ TI / Escritório</option>
           <option value="facilities">🧹 Facilities / Limpeza</option>
         </select>
@@ -571,9 +573,11 @@
           <label>Departamento *</label>
           <select id="catGrupo">
             <option value="">Selecione o departamento…</option>
-            <option value="rede">🔧 Infraestrutura de Rede</option>
-            <option value="fisica">🏗️ Infraestrutura Física</option>
-            <option value="ferramentas">🔨 Ferramentas</option>
+            <option value="ftth">💡 FTTH / Fibra Óptica</option>
+            <option value="rede_ativa">📡 Rede Ativa (CPE / OLT)</option>
+            <option value="wireless">📶 Wireless / Rádio</option>
+            <option value="infra">🏗️ Infraestrutura Física</option>
+            <option value="ferramentas">🔧 Ferramentas e Medição</option>
             <option value="ti">🖥️ TI / Escritório</option>
             <option value="facilities">🧹 Facilities / Limpeza</option>
           </select>

@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -656,6 +656,44 @@
 <div id="toast" class="toast hidden"></div>
 
 <script type="module" src="app.js"></script>
+
+<script>
+  /* ── App proxy: garante que onclick="App.xxx()" funcione mesmo antes
+        do módulo ES terminar de carregar (type="module" é sempre defer) ── */
+  (function() {
+    var _queue = [];
+    var _ready = false;
+    var _real  = null;
+
+    var handler = {
+      get: function(_, prop) {
+        if (_ready) return _real[prop];
+        return function() {
+          var args = Array.prototype.slice.call(arguments);
+          _queue.push({ prop: prop, args: args });
+        };
+      }
+    };
+
+    window.App = typeof Proxy !== 'undefined'
+      ? new Proxy({}, handler)
+      : {};
+
+    window.__appReady = function(realApp) {
+      _ready = true;
+      _real  = realApp;
+      /* replay queued calls */
+      _queue.forEach(function(call) {
+        if (typeof _real[call.prop] === 'function') {
+          _real[call.prop].apply(_real, call.args);
+        }
+      });
+      _queue = [];
+      /* substituir proxy pelo objeto real */
+      window.App = realApp;
+    };
+  })();
+</script>
 
 <script>
   if ('serviceWorker' in navigator) {

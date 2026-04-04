@@ -1676,6 +1676,12 @@ const App = (() => {
    BOOTSTRAP
    ═══════════════════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
-  window.App = App;
   App.init();
+  /* Notifica o proxy (index.html) que o App está pronto,
+     fazendo replay de qualquer chamada que ocorreu antes do módulo carregar */
+  if (typeof window.__appReady === 'function') {
+    window.__appReady(App);
+  } else {
+    window.App = App;
+  }
 });

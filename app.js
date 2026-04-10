@@ -54,15 +54,15 @@ const CORES_PREFIXO = {
 /** Departamentos — nível superior às categorias */
 const DEPARTAMENTOS = [
   // ── Operacional FTTH / ISP ──────────────────────────────────
-  { id: 'ftth',        nome: 'FTTH / Fibra Óptica',    icone: '💡', cor: '#38bdf8', corLt: 'rgba(56,189,248,.08)' },
-  { id: 'rede_ativa',  nome: 'Rede Ativa (CPE/OLT)',   icone: '📡', cor: '#f07020', corLt: 'rgba(240,112,32,.08)' },
-  { id: 'wireless',    nome: 'Wireless / Rádio',        icone: '📶', cor: '#06b6d4', corLt: 'rgba(6,182,212,.08)'  },
-  { id: 'infra',       nome: 'Infraestrutura Física',   icone: '🏗️', cor: '#fb923c', corLt: 'rgba(251,146,60,.08)' },
+  { id: 'ftth',        nome: 'FTTH / Fibra Óptica',    icone: '💡', cor: '#38bdf8', corLt: 'rgba(56,189,248,.08)'  },
+  { id: 'rede_ativa',  nome: 'Rede Ativa (CPE/OLT)',   icone: '📡', cor: '#f07020', corLt: 'rgba(240,112,32,.08)'  },
+  { id: 'wireless',    nome: 'Wireless / Rádio',        icone: '📶', cor: '#06b6d4', corLt: 'rgba(6,182,212,.08)'   },
+  { id: 'infra',       nome: 'Infraestrutura Física',   icone: '🏗️', cor: '#fb923c', corLt: 'rgba(251,146,60,.08)'  },
   // ── Suporte e Manutenção ────────────────────────────────────
-  { id: 'ferramentas', nome: 'Ferramentas e Medição',  icone: '🔧', cor: '#94a3b8', corLt: 'rgba(148,163,184,.08)'},
+  { id: 'ferramentas', nome: 'Ferramentas e Medição',  icone: '🔧', cor: '#94a3b8', corLt: 'rgba(148,163,184,.08)' },
   // ── Administrativo / Interno ────────────────────────────────
-  { id: 'ti',          nome: 'TI / Escritório',         icone: '🖥️', cor: '#a78bfa', corLt: 'rgba(167,139,250,.08)'},
-  { id: 'facilities',  nome: 'Facilities / Limpeza',   icone: '🧹', cor: '#34d399', corLt: 'rgba(52,211,153,.08)' },
+  { id: 'ti',          nome: 'TI / Escritório',         icone: '🖥️', cor: '#a78bfa', corLt: 'rgba(167,139,250,.08)' },
+  { id: 'facilities',  nome: 'Facilities / Limpeza',   icone: '🧹', cor: '#34d399', corLt: 'rgba(52,211,153,.08)'  },
 ];
 
 function getDepto(id) {
@@ -391,7 +391,17 @@ const App = (() => {
       categorias:     renderCategorias,
       usuarios:       renderUsuarios,
     };
-    if (renders[pagina]) renders[pagina]();
+    if (renders[pagina]) {
+      renders[pagina]();
+      // Fallback para conexões lentas: retenta se Firebase ainda não retornou
+      if (pagina === 'estoque-cat') {
+        setTimeout(() => { if (state.paginaAtual === 'estoque-cat') renderEstoqueCat(); }, 600);
+        setTimeout(() => { if (state.paginaAtual === 'estoque-cat') renderEstoqueCat(); }, 1800);
+      }
+      if (pagina === 'categorias') {
+        setTimeout(() => { if (state.paginaAtual === 'categorias') renderCategorias(); }, 600);
+      }
+    }
   }
 
   function toggleSidebar() {
@@ -413,6 +423,7 @@ const App = (() => {
         if (state.paginaAtual === 'produtos')      renderProdutos();
         if (state.paginaAtual === 'dashboard')     renderDashboard();
         if (state.paginaAtual === 'estoque-cat')   renderEstoqueCat();
+        if (state.paginaAtual === 'categorias')    renderCategorias();
         populateSelects();
       })
     );
@@ -421,8 +432,9 @@ const App = (() => {
       escutarColecao(COLECOES.categorias, lista => {
         state.categorias = lista;
         populateSelects();
-        if (state.paginaAtual === 'categorias') renderCategorias();
-        if (state.paginaAtual === 'dashboard')  renderDashboard();
+        if (state.paginaAtual === 'categorias')  renderCategorias();
+        if (state.paginaAtual === 'dashboard')   renderDashboard();
+        if (state.paginaAtual === 'estoque-cat') renderEstoqueCat();
       })
     );
 

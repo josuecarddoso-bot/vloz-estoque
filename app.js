@@ -54,19 +54,19 @@ const CORES_PREFIXO = {
 /** Departamentos — nível superior às categorias */
 const DEPARTAMENTOS = [
   // ── Operacional FTTH / ISP ──────────────────────────────────
-  { id: 'ftth',        nome: 'FTTH / Fibra Óptica',    icone: '💡', cor: '#0369a1', corLt: '#e0f2fe' },
-  { id: 'rede_ativa',  nome: 'Rede Ativa (CPE/OLT)',   icone: '📡', cor: '#162032', corLt: '#e8edf5' },
-  { id: 'wireless',    nome: 'Wireless / Rádio',        icone: '📶', cor: '#0891b2', corLt: '#e0f7ff' },
-  { id: 'infra',       nome: 'Infraestrutura Física',   icone: '🏗️', cor: '#c2410c', corLt: '#fff7ed' },
+  { id: 'ftth',        nome: 'FTTH / Fibra Óptica',    icone: '💡', cor: '#38bdf8', corLt: 'rgba(56,189,248,.08)' },
+  { id: 'rede_ativa',  nome: 'Rede Ativa (CPE/OLT)',   icone: '📡', cor: '#f07020', corLt: 'rgba(240,112,32,.08)' },
+  { id: 'wireless',    nome: 'Wireless / Rádio',        icone: '📶', cor: '#06b6d4', corLt: 'rgba(6,182,212,.08)'  },
+  { id: 'infra',       nome: 'Infraestrutura Física',   icone: '🏗️', cor: '#fb923c', corLt: 'rgba(251,146,60,.08)' },
   // ── Suporte e Manutenção ────────────────────────────────────
-  { id: 'ferramentas', nome: 'Ferramentas e Medição',  icone: '🔧', cor: '#334155', corLt: '#f1f5f9' },
+  { id: 'ferramentas', nome: 'Ferramentas e Medição',  icone: '🔧', cor: '#94a3b8', corLt: 'rgba(148,163,184,.08)'},
   // ── Administrativo / Interno ────────────────────────────────
-  { id: 'ti',          nome: 'TI / Escritório',         icone: '🖥️', cor: '#6d28d9', corLt: '#ede9fe' },
-  { id: 'facilities',  nome: 'Facilities / Limpeza',   icone: '🧹', cor: '#065f46', corLt: '#d1fae5' },
+  { id: 'ti',          nome: 'TI / Escritório',         icone: '🖥️', cor: '#a78bfa', corLt: 'rgba(167,139,250,.08)'},
+  { id: 'facilities',  nome: 'Facilities / Limpeza',   icone: '🧹', cor: '#34d399', corLt: 'rgba(52,211,153,.08)' },
 ];
 
 function getDepto(id) {
-  return DEPARTAMENTOS.find(d => d.id === id) || { id: '', nome: 'Geral', icone: '📦', cor: '#8a95a8', corLt: '#f1f5f9' };
+  return DEPARTAMENTOS.find(d => d.id === id) || { id: '', nome: 'Geral', icone: '📦', cor: '#8a95a8', corLt: 'rgba(138,149,168,.08)' };
 }
 
 /** Permissões por perfil */
@@ -391,15 +391,7 @@ const App = (() => {
       categorias:     renderCategorias,
       usuarios:       renderUsuarios,
     };
-    if (renders[pagina]) {
-      renders[pagina]();
-      // Fallback: se dados ainda não chegaram do Firebase (rede lenta),
-      // tenta renderizar novamente após 800ms e 2s
-      if (pagina === 'estoque-cat') {
-        setTimeout(() => { if (state.paginaAtual === 'estoque-cat') renderEstoqueCat(); }, 800);
-        setTimeout(() => { if (state.paginaAtual === 'estoque-cat') renderEstoqueCat(); }, 2000);
-      }
-    }
+    if (renders[pagina]) renders[pagina]();
   }
 
   function toggleSidebar() {
@@ -429,9 +421,8 @@ const App = (() => {
       escutarColecao(COLECOES.categorias, lista => {
         state.categorias = lista;
         populateSelects();
-        if (state.paginaAtual === 'categorias')  renderCategorias();
-        if (state.paginaAtual === 'dashboard')   renderDashboard();
-        if (state.paginaAtual === 'estoque-cat') renderEstoqueCat();
+        if (state.paginaAtual === 'categorias') renderCategorias();
+        if (state.paginaAtual === 'dashboard')  renderDashboard();
       })
     );
 
@@ -669,7 +660,7 @@ const App = (() => {
       html += `
         <tr class="depto-separator">
           <td colspan="8">
-            <div class="depto-sep-inner" style="border-left:3px solid ${depto.cor};background:${depto.corLt}">
+            <div class="depto-sep-inner" style="border-left:3px solid ${depto.cor}">
               <span class="depto-sep-icon">${depto.icone}</span>
               <span class="depto-sep-nome" style="color:${depto.cor}">${depto.nome}</span>
               <span class="depto-sep-count">${produtos.length} produto${produtos.length !== 1 ? 's' : ''}</span>
@@ -1334,7 +1325,7 @@ const App = (() => {
     gruposOrdenados.forEach(deptoId => {
       const depto = getDepto(deptoId);
       htmlCat += `
-        <div class="cat-depto-header" style="border-left:3px solid ${depto.cor};background:${depto.corLt}">
+        <div class="cat-depto-header" style="border-left:3px solid ${depto.cor}">
           <span>${depto.icone}</span>
           <span style="color:${depto.cor};font-weight:700;font-size:.85rem">${depto.nome}</span>
           <span style="color:${depto.cor};opacity:.6;font-size:.75rem">${grupos[deptoId].length} categoria${grupos[deptoId].length!==1?'s':''}</span>

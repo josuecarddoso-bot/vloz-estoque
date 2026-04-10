@@ -1101,8 +1101,9 @@ p { color: var(--text2); font-size: .875rem; }
    ══════════════════════════════════════════════════════════════ */
 .cat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 260px));
   gap: 12px;
+  justify-content: start;
 }
 .cat-card {
   background: var(--surface-1);
@@ -1575,9 +1576,10 @@ tr.depto-separator:hover td { background: transparent !important; }
 
 .cat-depto-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 260px));
   gap: 10px;
   margin-bottom: 4px;
+  justify-content: start;
 }
 
 /* Table empty state */

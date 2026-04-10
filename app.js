@@ -391,7 +391,15 @@ const App = (() => {
       categorias:     renderCategorias,
       usuarios:       renderUsuarios,
     };
-    if (renders[pagina]) renders[pagina]();
+    if (renders[pagina]) {
+      renders[pagina]();
+      // Fallback: se dados ainda não chegaram do Firebase (rede lenta),
+      // tenta renderizar novamente após 800ms e 2s
+      if (pagina === 'estoque-cat') {
+        setTimeout(() => { if (state.paginaAtual === 'estoque-cat') renderEstoqueCat(); }, 800);
+        setTimeout(() => { if (state.paginaAtual === 'estoque-cat') renderEstoqueCat(); }, 2000);
+      }
+    }
   }
 
   function toggleSidebar() {
@@ -421,8 +429,9 @@ const App = (() => {
       escutarColecao(COLECOES.categorias, lista => {
         state.categorias = lista;
         populateSelects();
-        if (state.paginaAtual === 'categorias') renderCategorias();
-        if (state.paginaAtual === 'dashboard')  renderDashboard();
+        if (state.paginaAtual === 'categorias')  renderCategorias();
+        if (state.paginaAtual === 'dashboard')   renderDashboard();
+        if (state.paginaAtual === 'estoque-cat') renderEstoqueCat();
       })
     );
 

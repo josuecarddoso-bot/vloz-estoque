@@ -1319,54 +1319,66 @@ const App = (() => {
     const podeDel  = podeF('gerenciarCats');
     const podeEdit = podeF('gerenciarCats');
 
-    // Agrupar categorias por departamento
-    const grupos = {};
-    state.categorias.forEach(c => {
-      const deptoId = c.grupo || '';
-      if (!grupos[deptoId]) grupos[deptoId] = [];
-      grupos[deptoId].push(c);
-    });
-    const ordemDepto = DEPARTAMENTOS.map(d => d.id);
-    const gruposOrdenados = Object.keys(grupos).sort((a,b) => {
-      const ia = ordemDepto.indexOf(a), ib = ordemDepto.indexOf(b);
-      if (ia===-1 && ib===-1) return 0; if (ia===-1) return 1; if (ib===-1) return -1;
-      return ia - ib;
-    });
+    const CORES = [
+      '#5a9e6a','#5b8fff','#f5a623','#8b5cf6',
+      '#06b6d4','#e5484d','#10b981','#f59e0b',
+      '#ec4899','#0ea5e9','#84cc16','#a855f7',
+    ];
 
-    let htmlCat = '';
-    gruposOrdenados.forEach(deptoId => {
-      const depto = getDepto(deptoId);
-      htmlCat += `
-        <div class="cat-depto-header" style="border-left:3px solid ${depto.cor}">
-          <span>${depto.icone}</span>
-          <span style="color:${depto.cor};font-weight:700;font-size:.85rem">${depto.nome}</span>
-          <span style="color:${depto.cor};opacity:.6;font-size:.75rem">${grupos[deptoId].length} categoria${grupos[deptoId].length!==1?'s':''}</span>
-        </div>
-        <div class="cat-depto-grid">`;
+    const dados = state.categorias.map((c, i) => {
+      const prods    = state.produtos.filter(p => p.categoriaId === c.id);
+      const qtdTotal = prods.reduce((s, p) => s + (p.qtd || 0), 0);
+      const zerados  = prods.filter(p => p.qtd <= 0).length;
+      const baixos   = prods.filter(p => p.qtd > 0 && p.qtd < (p.qtdMin || 0)).length;
+      const ok       = prods.filter(p => p.qtd >= (p.qtdMin || 0) && p.qtd > 0).length;
+      const depto    = getDepto(c.grupo || '');
+      const cor      = depto.cor !== '#8a95a8' ? depto.cor : CORES[i % CORES.length];
+      return { ...c, prods, qtdTotal, zerados, baixos, ok, cor, nProds: prods.length, depto };
+    }).sort((a, b) => a.nome.localeCompare(b.nome));
 
-      grupos[deptoId].forEach(c => {
-        const count   = state.produtos.filter(p => p.categoriaId === c.id).length;
-        const prefixo = getPrefixoPorCategoria(c.id);
-        const corPre  = CORES_PREFIXO[prefixo] || { bg: '#f1f5f9', color: '#334155' };
-        htmlCat += `
-          <div class="cat-card">
-            <div class="cat-icon">${c.icone || '📦'}</div>
-            <div class="cat-name">${c.nome}</div>
-            <div style="display:flex;align-items:center;gap:6px;margin-top:2px">
-              <span style="background:${corPre.bg};color:${corPre.color};padding:1px 7px;border-radius:20px;font-size:.65rem;font-weight:700;font-family:'DM Mono',monospace">${prefixo}</span>
+    grid.innerHTML = `<div class="ecat-grid">${dados.map(d => {
+      const prefixo = getPrefixoPorCategoria(d.id);
+      const statusHtml = [
+        d.zerados ? `<span class="ecat-badge ecat-danger">✕ ${d.zerados} zerado${d.zerados > 1 ? 's' : ''}</span>` : '',
+        d.baixos  ? `<span class="ecat-badge ecat-warn">▲ ${d.baixos} baixo${d.baixos > 1 ? 's' : ''}</span>`    : '',
+        d.ok      ? `<span class="ecat-badge ecat-ok">● ${d.ok} ok</span>`                                        : '',
+      ].filter(Boolean).join('');
+
+      return `
+        <div class="ecat-card">
+          <div class="ecat-card-top">
+            <div class="ecat-icon-wrap" style="background:${d.cor}22;color:${d.cor}">
+              ${d.icone || '📦'}
             </div>
-            <div class="cat-count">${count} produto${count !== 1 ? 's' : ''}</div>
-            <div class="cat-actions">
-              ${podeEdit ? `<button class="btn-icon" onclick="App.editarCategoria('${c.id}')" title="Editar">✏</button>` : ''}
-              ${podeDel  ? `<button class="btn-icon danger" onclick="App.deletarCategoria('${c.id}')" title="Excluir">🗑</button>` : ''}
+            <div class="ecat-info">
+              <div class="ecat-nome">${d.nome}</div>
+              <div class="ecat-grupo">${d.depto.nome || '—'}</div>
             </div>
-          </div>`;
-      });
+            <div class="ecat-total-wrap">
+              <div class="ecat-total-val" style="color:${d.cor}">${d.nProds}</div>
+              <div class="ecat-total-label">produtos</div>
+            </div>
+          </div>
 
-      htmlCat += `</div>`;
-    });
+          <div class="ecat-bar-row">
+            <div class="ecat-bar-track">
+              <div class="ecat-bar-fill" style="width:${d.qtdTotal > 0 ? 100 : 0}%;background:${d.cor}"></div>
+            </div>
+            <span class="ecat-pct-label">${d.qtdTotal} itens</span>
+          </div>
 
-    grid.innerHTML = htmlCat;
+          <div class="ecat-status-row">
+            <span class="ecat-badge" style="background:${d.cor}22;color:${d.cor};border:1px solid ${d.cor}44">${prefixo}</span>
+            ${statusHtml || '<span class="ecat-badge ecat-ok">Sem produtos</span>'}
+          </div>
+
+          ${(podeEdit || podeDel) ? `
+          <div style="display:flex;gap:6px;margin-top:4px;padding-top:10px;border-top:1px solid rgba(255,255,255,.05)">
+            ${podeEdit ? `<button class="btn-icon" onclick="App.editarCategoria('${d.id}')" title="Editar" style="flex:1">✏ Editar</button>` : ''}
+            ${podeDel  ? `<button class="btn-icon danger" onclick="App.deletarCategoria('${d.id}')" title="Excluir">🗑</button>` : ''}
+          </div>` : ''}
+        </div>`;
+    }).join('')}</div>`;
   }
 
   async function salvarCategoria() {

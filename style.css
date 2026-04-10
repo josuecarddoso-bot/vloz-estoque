@@ -965,6 +965,21 @@ p { color: var(--text2); font-size: .875rem; }
 .btn-icon:hover        { background: var(--surface-3); color: var(--text); border-color: var(--border-strong); }
 .btn-icon.danger:hover { background: var(--danger-lt); color: var(--danger); border-color: var(--danger-border); }
 
+/* btn-icon com flex:1 para botão editar nas categorias */
+.ecat-card .btn-icon[style*="flex:1"] {
+  width: auto;
+  padding: 0 10px;
+  font-size: .75rem;
+  gap: 4px;
+  justify-content: center;
+  color: var(--text2);
+}
+.ecat-card .btn-icon[style*="flex:1"]:hover {
+  color: var(--orange);
+  border-color: var(--orange-border);
+  background: var(--orange-dim);
+}
+
 .btn-link {
   background: none;
   border: none;
@@ -1100,10 +1115,7 @@ p { color: var(--text2); font-size: .875rem; }
    CAT GRID
    ══════════════════════════════════════════════════════════════ */
 .cat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 260px));
-  gap: 12px;
-  justify-content: start;
+  /* Agora usa ecat-grid internamente via JS */
 }
 .cat-card {
   background: var(--surface-1);
@@ -1574,13 +1586,7 @@ tr.depto-separator:hover td { background: transparent !important; }
 }
 .cat-depto-header:first-child { margin-top: 0; }
 
-.cat-depto-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 260px));
-  gap: 10px;
-  margin-bottom: 4px;
-  justify-content: start;
-}
+.cat-depto-grid { display: none; }
 
 /* Table empty state */
 .data-table tbody tr td[colspan="8"] {

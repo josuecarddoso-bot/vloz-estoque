@@ -8,6 +8,8 @@
 
 import {
   COLECOES,
+  autenticar,
+  desautenticar,
   salvarDoc,
   excluirDoc,
   salvarLote,
@@ -218,20 +220,15 @@ const App = (() => {
     if (el) el.textContent = FRASES_LOGIN[Math.floor(Math.random() * FRASES_LOGIN.length)];
   }
 
-  let _loginTentativas = 0;
-  let _loginBloqueadoAte = 0;
+  let _loginCarregando = false;
 
-  function login() {
+  async function login() {
+    if (_loginCarregando) return;
+
     const loginVal = document.getElementById('loginUser').value.trim();
     const senhaVal = document.getElementById('loginPass').value;
     const errEl    = document.getElementById('loginError');
-
-    if (Date.now() < _loginBloqueadoAte) {
-      const seg = Math.ceil((_loginBloqueadoAte - Date.now()) / 1000);
-      errEl.textContent = `Muitas tentativas. Aguarde ${seg}s.`;
-      errEl.classList.remove('hidden');
-      return;
-    }
+    const btnEl    = document.querySelector('button[onclick="App.login()"]');
 
     if (!loginVal || !senhaVal) {
       errEl.textContent = 'Preencha usuário e senha.';
@@ -239,32 +236,54 @@ const App = (() => {
       return;
     }
 
-    // ⚠️ CREDENCIAL BOOTSTRAP — remova antes de colocar em produção pública.
-    const admPadrao = { id: 'admin_default', nome: 'Administrador', login: 'admin', senha: 'vloz2024', perfil: 'admin' };
-    const todos = [...state.usuarios, admPadrao];
-    const usuario = todos.find(u => u.login === loginVal && u.senha === senhaVal);
-
-    if (!usuario) {
-      errEl.textContent = 'Usuário ou senha incorretos.';
-      errEl.classList.remove('hidden');
-      return;
-    }
-
+    _loginCarregando = true;
+    if (btnEl) { btnEl.textContent = 'Entrando…'; btnEl.disabled = true; }
     errEl.classList.add('hidden');
-    state.sessao = { id: usuario.id, nome: usuario.nome, login: usuario.login, perfil: usuario.perfil || 'almoxarife' };
 
-    _loginTentativas = 0; _loginBloqueadoAte = 0;
-    document.getElementById('loginScreen').classList.add('hidden');
-    document.getElementById('appShell').classList.remove('hidden');
+    try {
+      const usuario = await autenticar(loginVal, senhaVal);
 
-    atualizarUIUsuario();
-    navigate('dashboard');
-    toast(`Bem-vindo, ${usuario.nome}!`, 'success');
+      state.sessao = {
+        id:     usuario.id,
+        nome:   usuario.nome,
+        login:  usuario.login,
+        perfil: usuario.perfil || 'visualizador',
+      };
+
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('appShell').classList.remove('hidden');
+
+      atualizarUIUsuario();
+      iniciarFirebase();
+      navigate('dashboard');
+      toast(`Bem-vindo, ${usuario.nome}!`, 'success');
+
+    } catch (e) {
+      console.error('[Login]', e);
+      const msg = (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found')
+        ? 'Usuário ou senha incorretos.'
+        : e.code === 'auth/too-many-requests'
+        ? 'Muitas tentativas. Aguarde alguns minutos.'
+        : 'Erro ao fazer login. Tente novamente.';
+      errEl.textContent = msg;
+      errEl.classList.remove('hidden');
+    } finally {
+      _loginCarregando = false;
+      if (btnEl) { btnEl.textContent = 'Entrar'; btnEl.disabled = false; }
+    }
   }
 
-  function logout() {
+  async function logout() {
     if (!confirm('Confirmar saída do sistema?')) return;
-    state.sessao = null;
+    try { await desautenticar(); } catch (_) {}
+    // Para os listeners do Firestore
+    state.unsubscribers.forEach(fn => fn());
+    state.unsubscribers = [];
+    state.sessao    = null;
+    state.produtos  = [];
+    state.categorias = [];
+    state.usuarios  = [];
+    state.historico = [];
     document.getElementById('appShell').classList.add('hidden');
     document.getElementById('loginScreen').classList.remove('hidden');
     document.getElementById('loginUser').value = '';

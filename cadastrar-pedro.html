@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cadastrar Pedro — VloZ</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background: #f5f5f5; }
+    .card { background: #fff; border-radius: 10px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+    h1 { color: #162032; }
+    button { background: #f07020; color: #fff; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 1rem; margin-top: 12px; width: 100%; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    .log { background: #162032; color: #8FBD9A; padding: 16px; border-radius: 6px; font-family: monospace; font-size: .85rem; min-height: 80px; white-space: pre-wrap; margin-top: 16px; }
+    .warn { background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: .9rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🔐 Cadastrar Pedro no Firebase Auth</h1>
+    <div class="warn">
+      ⚠️ <strong>Execute esta página UMA única vez.</strong><br>
+      Após concluir, <strong>exclua este arquivo do projeto.</strong>
+    </div>
+    <ul>
+      <li><strong>pedro</strong> → pedro@vloz.internal | Senha: 567890 | Almoxarife</li>
+    </ul>
+    <button id="btnCadastrar" onclick="cadastrar()">▶ Cadastrar Pedro</button>
+    <div class="log" id="log">Aguardando…</div>
+  </div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC6mdmwhOIhRnsX1Q2JxLRL2Kh7xXOSJB0",
+  authDomain: "vloz-estoque.firebaseapp.com",
+  projectId: "vloz-estoque",
+  storageBucket: "vloz-estoque.firebasestorage.app",
+  messagingSenderId: "79794241039",
+  appId: "1:79794241039:web:1cdf606d09828517296d7a"
+};
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+const logEl = document.getElementById('log');
+const btnEl = document.getElementById('btnCadastrar');
+
+function log(msg) {
+  logEl.textContent += '\n' + msg;
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+window.cadastrar = async function() {
+  btnEl.disabled = true;
+  logEl.textContent = 'Iniciando…';
+
+  try {
+    log('\n→ Cadastrando pedro (pedro@vloz.internal)…');
+    const cred = await createUserWithEmailAndPassword(auth, 'pedro@vloz.internal', '567890');
+    const uid  = cred.user.uid;
+    log(`  ✅ Firebase Auth criado. UID: ${uid}`);
+
+    await setDoc(doc(db, 'usuarios', uid), {
+      id:     uid,
+      nome:   'Pedro',
+      login:  'pedro',
+      perfil: 'almoxarife',
+    });
+    log('  ✅ Firestore atualizado com UID correto.');
+    log('\n✅ Concluído! Exclua este arquivo do projeto.');
+    btnEl.textContent = 'Concluído ✓';
+
+  } catch (e) {
+    if (e.code === 'auth/email-already-in-use') {
+      log('  ⚠️ pedro já existe no Firebase Auth.');
+    } else {
+      log(`  ❌ Erro: ${e.message}`);
+    }
+    btnEl.disabled = false;
+    btnEl.textContent = 'Tentar novamente';
+  }
+};
+</script>
+</body>
+</html>

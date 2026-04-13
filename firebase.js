@@ -1,15 +1,8 @@
 /**
  * ═══════════════════════════════════════════════════════════════
- *  VLOZ TELECOM — FIREBASE CONFIG v2.0
+ *  VLOZ TELECOM — FIREBASE CONFIG v3.0
+ *  Autenticação via Firebase Authentication (Email/Senha)
  *  Sincronização em tempo real via Firestore
- * ═══════════════════════════════════════════════════════════════
- *
- *  ⚠️  SEGURANÇA: Substitua as credenciais abaixo pelas do seu
- *      projeto Firebase. Para produção, considere usar variáveis
- *      de ambiente (ex: Vercel Environment Variables) e não
- *      commitar chaves reais no repositório público.
- *
- *      Console Firebase → Configurações → Seus apps → SDK Web
  * ═══════════════════════════════════════════════════════════════
  */
 
@@ -18,6 +11,7 @@ import {
   getFirestore,
   collection,
   doc,
+  getDoc,
   setDoc,
   deleteDoc,
   onSnapshot,
@@ -26,11 +20,14 @@ import {
   writeBatch,
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-/* ── 1. CONFIGURAÇÃO ────────────────────────────────────────────
-   ⚠️ Substitua pelos valores do SEU projeto Firebase.
-   Em produção, use variáveis de ambiente via Vercel ou similar.
-   ─────────────────────────────────────────────────────────────── */
+/* ── 1. CONFIGURAÇÃO ─────────────────────────────────────────── */
 const firebaseConfig = {
   apiKey: "AIzaSyC6mdmwhOIhRnsX1Q2JxLRL2Kh7xXOSJB0",
   authDomain: "vloz-estoque.firebaseapp.com",
@@ -44,6 +41,7 @@ const firebaseConfig = {
 /* ── 2. INICIALIZAÇÃO ─────────────────────────────────────────── */
 const firebaseApp = initializeApp(firebaseConfig);
 const db          = getFirestore(firebaseApp);
+const auth        = getAuth(firebaseApp);
 
 /* ── 3. COLEÇÕES ──────────────────────────────────────────────── */
 const COLECOES = {
@@ -53,13 +51,60 @@ const COLECOES = {
   historico:  "historico",
 };
 
-/* ── 4. FUNÇÕES DE ESCRITA ────────────────────────────────────── */
+/* ── 4. AUTENTICAÇÃO ─────────────────────────────────────────── */
 
 /**
- * Salva (cria ou atualiza) um único documento em uma coleção.
- * @param {string} colecao  - Nome da coleção
- * @param {object} dado     - Objeto com campo `id` obrigatório
+ * Faz login com email e senha no Firebase Authentication.
+ * Após autenticar, busca os dados do usuário na coleção usuarios
+ * usando o email como chave de busca.
+ *
+ * @param {string} loginVal  - Login digitado pelo usuário (ex: "josue")
+ * @param {string} senhaVal  - Senha digitada
+ * @returns {object} dados do usuário: { id, nome, login, perfil }
  */
+async function autenticar(loginVal, senhaVal) {
+  // Monta o email a partir do login (padrão: login@vloz.internal)
+  const email = `${loginVal}@vloz.internal`;
+
+  // Faz login no Firebase Auth
+  const credencial = await signInWithEmailAndPassword(auth, email, senhaVal);
+  const uid = credencial.user.uid;
+
+  // Busca dados do usuário no Firestore usando o UID do Firebase Auth
+  const snap = await getDoc(doc(db, COLECOES.usuarios, uid));
+  if (!snap.exists()) {
+    await signOut(auth);
+    throw new Error('Usuário não encontrado na base de dados.');
+  }
+
+  const dados = snap.data();
+  return {
+    id:     uid,
+    nome:   dados.nome,
+    login:  dados.login,
+    perfil: dados.perfil || 'visualizador',
+  };
+}
+
+/**
+ * Faz logout do Firebase Authentication.
+ */
+async function desautenticar() {
+  await signOut(auth);
+}
+
+/**
+ * Observa mudanças no estado de autenticação.
+ * Retorna a função unsubscribe.
+ *
+ * @param {function} callback - Recebe o user do Firebase Auth ou null
+ */
+function observarAuth(callback) {
+  return onAuthStateChanged(auth, callback);
+}
+
+/* ── 5. FUNÇÕES DE ESCRITA ────────────────────────────────────── */
+
 async function salvarDoc(colecao, dado) {
   if (!dado?.id) {
     console.error('[Firebase] Tentativa de salvar documento sem id:', dado);
@@ -74,11 +119,6 @@ async function salvarDoc(colecao, dado) {
   }
 }
 
-/**
- * Exclui um documento de uma coleção.
- * @param {string} colecao - Nome da coleção
- * @param {string} id      - ID do documento
- */
 async function excluirDoc(colecao, id) {
   if (!id) throw new Error('ID não fornecido para exclusão');
   try {
@@ -89,12 +129,6 @@ async function excluirDoc(colecao, id) {
   }
 }
 
-/**
- * Salva múltiplos documentos em lote (batch write).
- * Limita a 500 operações por batch (limite do Firestore).
- * @param {string} colecao - Nome da coleção
- * @param {Array}  lista   - Array de objetos com campo `id`
- */
 async function salvarLote(colecao, lista) {
   if (!Array.isArray(lista) || !lista.length) return;
   try {
@@ -114,17 +148,8 @@ async function salvarLote(colecao, lista) {
   }
 }
 
-/* ── 5. LISTENERS EM TEMPO REAL ──────────────────────────────── */
+/* ── 6. LISTENERS EM TEMPO REAL ──────────────────────────────── */
 
-/**
- * Escuta uma coleção em tempo real.
- * Retorna função `unsubscribe()` para parar de escutar.
- *
- * @param {string}   colecao   - Nome da coleção
- * @param {function} callback  - Recebe o array atualizado de documentos
- * @param {string}   [ordenar] - Campo para orderBy (opcional)
- * @returns {function} unsubscribe
- */
 function escutarColecao(colecao, callback, ordenar = null) {
   const col = collection(db, colecao);
   const q   = ordenar ? query(col, orderBy(ordenar)) : col;
@@ -134,7 +159,7 @@ function escutarColecao(colecao, callback, ordenar = null) {
     (snapshot) => {
       const lista = snapshot.docs.map(d => {
         const data = { ...d.data() };
-        delete data._updatedAt; // Remove campo interno antes de passar ao app
+        delete data._updatedAt;
         return data;
       });
       callback(lista);
@@ -145,10 +170,14 @@ function escutarColecao(colecao, callback, ordenar = null) {
   );
 }
 
-/* ── 6. EXPORTAÇÕES ─────────────────────────────────────────── */
+/* ── 7. EXPORTAÇÕES ─────────────────────────────────────────── */
 export {
   db,
+  auth,
   COLECOES,
+  autenticar,
+  desautenticar,
+  observarAuth,
   salvarDoc,
   excluirDoc,
   salvarLote,

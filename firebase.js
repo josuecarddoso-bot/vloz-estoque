@@ -23,6 +23,8 @@ import {
 import {
   getAuth,
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updatePassword,
   signOut,
   onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -56,7 +58,8 @@ const COLECOES = {
 /**
  * Faz login com email e senha no Firebase Authentication.
  * Após autenticar, busca os dados do usuário na coleção usuarios
- * usando o email como chave de busca.
+ * usando o UID como chave. Se o documento existir com login igual
+ * mas UID diferente (usuário recriado), corrige automaticamente.
  *
  * @param {string} loginVal  - Login digitado pelo usuário (ex: "josue")
  * @param {string} senhaVal  - Senha digitada
@@ -64,14 +67,44 @@ const COLECOES = {
  */
 async function autenticar(loginVal, senhaVal) {
   // Monta o email a partir do login (padrão: login@vloz.internal)
-  const email = `${loginVal}@vloz.internal`;
+  const email = `${loginVal.trim()}@vloz.internal`;
 
   // Faz login no Firebase Auth
   const credencial = await signInWithEmailAndPassword(auth, email, senhaVal);
   const uid = credencial.user.uid;
 
-  // Busca dados do usuário no Firestore usando o UID do Firebase Auth
-  const snap = await getDoc(doc(db, COLECOES.usuarios, uid));
+  // Busca documento no Firestore pelo UID
+  let snap = await getDoc(doc(db, COLECOES.usuarios, uid));
+
+  // Se não encontrou pelo UID, busca pelo campo login na coleção
+  // (cobre o caso de usuário recriado com UID diferente)
+  if (!snap.exists()) {
+    const { getDocs, where, query: fsQuery } = await import(
+      "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"
+    );
+    const col = collection(db, COLECOES.usuarios);
+    const q   = fsQuery(col, where('login', '==', loginVal.trim()));
+    const resultado = await getDocs(q);
+
+    if (!resultado.empty) {
+      // Encontrou o documento pelo login — migra para o novo UID
+      const docAntigo = resultado.docs[0];
+      const dadosAntigos = docAntigo.data();
+      // Salva com o novo UID
+      await setDoc(doc(db, COLECOES.usuarios, uid), {
+        ...dadosAntigos,
+        id: uid,
+        _updatedAt: serverTimestamp(),
+      });
+      // Remove o documento antigo se o ID era diferente
+      if (docAntigo.id !== uid) {
+        await deleteDoc(doc(db, COLECOES.usuarios, docAntigo.id));
+      }
+      // Relê o documento recém-criado
+      snap = await getDoc(doc(db, COLECOES.usuarios, uid));
+    }
+  }
+
   if (!snap.exists()) {
     await signOut(auth);
     throw new Error('Usuário não encontrado na base de dados.');
@@ -84,6 +117,58 @@ async function autenticar(loginVal, senhaVal) {
     login:  dados.login,
     perfil: dados.perfil || 'visualizador',
   };
+}
+
+/**
+ * Cria um novo usuário no Firebase Authentication E no Firestore.
+ * Deve ser chamado sempre que um novo usuário for cadastrado no sistema.
+ *
+ * @param {string} loginVal  - Login do usuário (ex: "pedro")
+ * @param {string} senhaVal  - Senha
+ * @param {object} dadosExtra - { nome, perfil } e outros campos
+ * @returns {string} UID do usuário criado
+ */
+async function criarUsuarioAuth(loginVal, senhaVal, dadosExtra = {}) {
+  const email = `${loginVal.trim()}@vloz.internal`;
+
+  // Salva o usuário atual para não perder a sessão
+  const usuarioAtual = auth.currentUser;
+
+  // Cria no Firebase Authentication
+  const credencial = await createUserWithEmailAndPassword(auth, email, senhaVal);
+  const uid = credencial.user.uid;
+
+  // Salva no Firestore com o UID como chave do documento
+  await setDoc(doc(db, COLECOES.usuarios, uid), {
+    ...dadosExtra,
+    id:    uid,
+    login: loginVal.trim(),
+    _updatedAt: serverTimestamp(),
+  });
+
+  // Se havia um usuário logado antes, restaura a sessão dele
+  // (criar usuário no Auth faz login automático no novo usuário)
+  if (usuarioAtual) {
+    // Força o Auth a reconhecer o usuário original novamente via token
+    // O app vai continuar com a sessão do admin que está criando
+    await signOut(auth);
+    // Nota: o app.js deve fazer re-login do admin após chamar esta função
+    // ou usar o Admin SDK no backend para evitar essa limitação
+  }
+
+  return uid;
+}
+
+/**
+ * Atualiza a senha de um usuário no Firebase Authentication.
+ * Só funciona para o usuário atualmente logado.
+ *
+ * @param {string} novaSenha
+ */
+async function atualizarSenhaAuth(novaSenha) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Nenhum usuário logado');
+  await updatePassword(user, novaSenha);
 }
 
 /**
@@ -176,6 +261,8 @@ export {
   auth,
   COLECOES,
   autenticar,
+  criarUsuarioAuth,
+  atualizarSenhaAuth,
   desautenticar,
   observarAuth,
   salvarDoc,

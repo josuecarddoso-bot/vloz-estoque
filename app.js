@@ -9,6 +9,7 @@
 import {
   COLECOES,
   autenticar,
+  criarUsuarioAuth,
   desautenticar,
   salvarDoc,
   excluirDoc,
@@ -1506,10 +1507,10 @@ const App = (() => {
   async function salvarUsuario() {
     if (!podeF('gerenciarUsuarios')) { toast('Sem permissão', 'error'); return; }
 
-    const id    = document.getElementById('userId').value;
-    const nome  = document.getElementById('userName').value.trim();
-    const login = document.getElementById('userLogin').value.trim();
-    const senha = document.getElementById('userPass').value;
+    const id     = document.getElementById('userId').value;
+    const nome   = document.getElementById('userName').value.trim();
+    const login  = document.getElementById('userLogin').value.trim();
+    const senha  = document.getElementById('userPass').value;
     const perfil = document.getElementById('userRole').value;
 
     if (!nome || !login) { toast('Nome e login são obrigatórios', 'error'); return; }
@@ -1519,17 +1520,52 @@ const App = (() => {
     const jaExiste = state.usuarios.find(u => u.login === login && u.id !== id);
     if (jaExiste) { toast('Login já está em uso', 'error'); return; }
 
-    const uid = id || pid();
-    const atual = id ? state.usuarios.find(u => u.id === id) : {};
-    const dados = { ...atual, id: uid, nome, login, perfil };
-    if (senha) dados.senha = senha;
-
     try {
-      await salvarDoc(COLECOES.usuarios, dados);
+      if (!id) {
+        // ── NOVO USUÁRIO ──
+        // Guarda credenciais do admin atual para restaurar sessão
+        const adminLogin  = state.sessao.login;
+        const adminSenha  = prompt(
+          `Para criar o usuário "${nome}", confirme sua senha de administrador:`
+        );
+        if (!adminSenha) { toast('Operação cancelada', 'error'); return; }
+
+        // Cria no Firebase Auth + Firestore
+        await criarUsuarioAuth(login, senha, { nome, login, perfil });
+
+        // Restaura sessão do admin (criarUsuarioAuth faz logout automático)
+        toast('Usuário criado! Restaurando sua sessão…', 'success');
+        const sessaoAdmin = await autenticar(adminLogin, adminSenha);
+        state.sessao = {
+          id:     sessaoAdmin.id,
+          nome:   sessaoAdmin.nome,
+          login:  sessaoAdmin.login,
+          perfil: sessaoAdmin.perfil,
+        };
+        atualizarUIUsuario();
+
+      } else {
+        // ── EDITAR USUÁRIO EXISTENTE ──
+        const atual = state.usuarios.find(u => u.id === id) || {};
+        const dados = { ...atual, id, nome, login, perfil };
+        // Nota: alteração de senha pelo admin requer Admin SDK (backend)
+        // Aqui apenas atualiza os dados do Firestore
+        await salvarDoc(COLECOES.usuarios, dados);
+      }
+
       closeModal('modalUsuario');
-      toast(id ? 'Usuário atualizado' : 'Usuário criado');
+      toast(id ? 'Usuário atualizado' : 'Usuário criado com sucesso!');
     } catch (e) {
-      toast('Erro ao salvar usuário', 'error');
+      console.error('[salvarUsuario]', e);
+      if (e.code === 'auth/email-already-in-use') {
+        toast('Este login já está em uso no sistema de autenticação', 'error');
+      } else if (e.code === 'auth/weak-password') {
+        toast('Senha muito fraca. Use pelo menos 6 caracteres', 'error');
+      } else if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password') {
+        toast('Senha de administrador incorreta', 'error');
+      } else {
+        toast('Erro ao salvar usuário: ' + (e.message || ''), 'error');
+      }
     }
   }
 

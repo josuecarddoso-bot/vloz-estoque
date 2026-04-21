@@ -10,6 +10,7 @@ import {
   COLECOES,
   autenticar,
   criarUsuarioAuth,
+  deletarUsuarioAuth,
   desautenticar,
   salvarDoc,
   excluirDoc,
@@ -1574,12 +1575,30 @@ const App = (() => {
     const u = state.usuarios.find(x => x.id === id);
     if (!u) return;
     if (state.sessao?.id === id) { toast('Você não pode excluir seu próprio usuário', 'error'); return; }
-    if (!confirm(`Excluir usuário "${u.nome}"?`)) return;
+    if (!confirm(`Excluir usuário "${u.nome}"?\n\nIsso removerá o acesso dele ao sistema permanentemente.`)) return;
+
+    // Pede a senha do usuário alvo para deletar do Authentication
+    const senhaAlvo = prompt(`Digite a senha atual de "${u.nome}" para confirmar a exclusão:`);
+    if (!senhaAlvo) { toast('Exclusão cancelada', 'error'); return; }
+
+    // Pede a senha do admin para restaurar sessão após deletar
+    const adminSenha = prompt(`Confirme sua senha de administrador (${state.sessao.login}):`);
+    if (!adminSenha) { toast('Exclusão cancelada', 'error'); return; }
+
     try {
-      await excluirDoc(COLECOES.usuarios, id);
-      toast('Usuário excluído');
+      await deletarUsuarioAuth(id, u.login, senhaAlvo, state.sessao.login, adminSenha);
+      toast(`Usuário "${u.nome}" excluído com sucesso`);
     } catch (e) {
-      toast('Erro ao excluir usuário', 'error');
+      console.error('[deletarUsuario]', e);
+      if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password') {
+        toast('Senha do usuário incorreta. Exclusão cancelada.', 'error');
+      } else if (e.code === 'auth/user-not-found') {
+        // Usuário não existe no Auth mas existe no Firestore — remove só do Firestore
+        await excluirDoc(COLECOES.usuarios, id);
+        toast(`Usuário "${u.nome}" removido`, 'success');
+      } else {
+        toast('Erro ao excluir usuário: ' + (e.message || ''), 'error');
+      }
     }
   }
 

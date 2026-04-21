@@ -172,6 +172,40 @@ async function atualizarSenhaAuth(novaSenha) {
 }
 
 /**
+ * Remove um usuário do Firestore E do Firebase Authentication.
+ * Como o SDK client-side só permite deletar o próprio usuário,
+ * a estratégia é: logar temporariamente como o usuário alvo,
+ * deletar a conta dele, e restaurar a sessão do admin.
+ *
+ * @param {string} uid        - UID do usuário a deletar
+ * @param {string} loginAlvo  - Login do usuário a deletar (ex: "pedro")
+ * @param {string} senhaAlvo  - Senha atual do usuário a deletar
+ * @param {string} adminLogin - Login do admin para restaurar sessão
+ * @param {string} adminSenha - Senha do admin para restaurar sessão
+ */
+async function deletarUsuarioAuth(uid, loginAlvo, senhaAlvo, adminLogin, adminSenha) {
+  const emailAlvo = `${loginAlvo.trim()}@vloz.internal`;
+
+  // Faz login como o usuário alvo
+  const credAlvo = await signInWithEmailAndPassword(auth, emailAlvo, senhaAlvo);
+
+  // Deleta a conta do Firebase Authentication
+  await credAlvo.user.delete();
+
+  // Remove do Firestore
+  await deleteDoc(doc(db, COLECOES.usuarios, uid));
+
+  // Restaura sessão do admin
+  const credAdmin = await signInWithEmailAndPassword(
+    auth,
+    `${adminLogin.trim()}@vloz.internal`,
+    adminSenha
+  );
+
+  return credAdmin.user.uid;
+}
+
+/**
  * Faz logout do Firebase Authentication.
  */
 async function desautenticar() {
@@ -263,6 +297,7 @@ export {
   autenticar,
   criarUsuarioAuth,
   atualizarSenhaAuth,
+  deletarUsuarioAuth,
   desautenticar,
   observarAuth,
   salvarDoc,

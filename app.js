@@ -1557,6 +1557,60 @@ const App = (() => {
     }
 
     // ── EDITAR USUÁRIO EXISTENTE ──
+    if (senha) {
+      // Tem nova senha — usa modal para pedir senha atual do usuário + senha do admin
+      closeModal('modalUsuario');
+      pedirTrocaSenha(
+        nome,
+        async (senhaAtual, adminSenha) => {
+          try {
+            const usuarioAlvo = state.usuarios.find(u => u.id === id);
+            if (!usuarioAlvo) { toast('Usuário não encontrado', 'error'); return; }
+
+            const emailAlvo = `${usuarioAlvo.login.trim()}@vloz.internal`;
+
+            // Importa as funções necessárias
+            const { getAuth, signInWithEmailAndPassword, updatePassword } = await import(
+              'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'
+            );
+            const authInst = getAuth();
+
+            // Loga como o usuário alvo para trocar a senha
+            const credAlvo = await signInWithEmailAndPassword(authInst, emailAlvo, senhaAtual);
+            await updatePassword(credAlvo.user, senha);
+
+            // Atualiza dados no Firestore
+            const atual = state.usuarios.find(u => u.id === id) || {};
+            const dados = { ...atual, id, nome, login, perfil };
+            await salvarDoc(COLECOES.usuarios, dados);
+
+            // Restaura sessão do admin
+            toast('Senha atualizada! Restaurando sessão…', 'success');
+            const sessaoAdmin = await autenticar(state.sessao.login, adminSenha);
+            state.sessao = {
+              id:     sessaoAdmin.id,
+              nome:   sessaoAdmin.nome,
+              login:  sessaoAdmin.login,
+              perfil: sessaoAdmin.perfil,
+            };
+            atualizarUIUsuario();
+            toast(`Usuário "${nome}" atualizado com sucesso!`);
+          } catch (e) {
+            console.error('[editarUsuario senha]', e);
+            if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password') {
+              toast('Senha atual do usuário incorreta', 'error');
+            } else if (e.code === 'auth/weak-password') {
+              toast('Nova senha muito fraca. Use pelo menos 6 caracteres', 'error');
+            } else {
+              toast('Erro ao atualizar: ' + (e.message || ''), 'error');
+            }
+          }
+        }
+      );
+      return;
+    }
+
+    // Sem nova senha — atualiza só nome, login e perfil no Firestore
     try {
       const atual = state.usuarios.find(u => u.id === id) || {};
       const dados = { ...atual, id, nome, login, perfil };
@@ -1836,6 +1890,67 @@ const App = (() => {
       }
       overlay.remove();
       callback(senhaAlvo, adminSenha);
+    });
+  }
+
+  /**
+   * Modal para troca de senha — pede senha atual do usuário + senha do admin.
+   */
+  function pedirTrocaSenha(nomeUsuario, callback) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'modalTrocaSenha';
+    overlay.innerHTML = `
+      <div class="modal" style="max-width:420px">
+        <div class="modal-header">
+          <h2>🔑 Trocar senha</h2>
+          <button onclick="document.getElementById('modalTrocaSenha').remove()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="background:var(--accent-lt);border:1px solid var(--accent-border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:18px;font-size:.8125rem;color:var(--accent)">
+            🔐 Atualizando senha de <strong>${nomeUsuario}</strong>
+          </div>
+          <div class="form-group" style="margin-bottom:14px">
+            <label>Senha atual de ${nomeUsuario}</label>
+            <input type="password" id="inputSenhaAtualTroca" placeholder="Senha atual do usuário…" autocomplete="off" />
+          </div>
+          <div class="form-group" style="margin-bottom:14px">
+            <label>Sua senha de administrador</label>
+            <input type="password" id="inputAdminSenhaTroca" placeholder="Sua senha…" autocomplete="current-password" />
+          </div>
+          <div id="erroTrocaSenha" class="login-error hidden"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-outline" onclick="document.getElementById('modalTrocaSenha').remove()">Cancelar</button>
+          <button class="btn-primary" id="btnConfirmarTroca">Confirmar troca</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const inputAtual  = document.getElementById('inputSenhaAtualTroca');
+    const inputAdmin  = document.getElementById('inputAdminSenhaTroca');
+    const btnConfirmar = document.getElementById('btnConfirmarTroca');
+    const erroEl      = document.getElementById('erroTrocaSenha');
+
+    setTimeout(() => inputAtual?.focus(), 80);
+
+    [inputAtual, inputAdmin].forEach(el => {
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') btnConfirmar.click();
+      });
+    });
+
+    btnConfirmar.addEventListener('click', () => {
+      const senhaAtual = inputAtual.value;
+      const adminSenha = inputAdmin.value;
+      if (!senhaAtual || !adminSenha) {
+        erroEl.textContent = 'Preencha os dois campos para continuar.';
+        erroEl.classList.remove('hidden');
+        return;
+      }
+      overlay.remove();
+      callback(senhaAtual, adminSenha);
     });
   }
 

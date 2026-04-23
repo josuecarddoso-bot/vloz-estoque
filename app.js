@@ -1521,52 +1521,50 @@ const App = (() => {
     const jaExiste = state.usuarios.find(u => u.login === login && u.id !== id);
     if (jaExiste) { toast('Login já está em uso', 'error'); return; }
 
-    try {
-      if (!id) {
-        // ── NOVO USUÁRIO ──
-        // Guarda credenciais do admin atual para restaurar sessão
-        const adminLogin  = state.sessao.login;
-        const adminSenha  = prompt(
-          `Para criar o usuário "${nome}", confirme sua senha de administrador:`
-        );
-        if (!adminSenha) { toast('Operação cancelada', 'error'); return; }
-
-        // Cria no Firebase Auth + Firestore
-        await criarUsuarioAuth(login, senha, { nome, login, perfil });
-
-        // Restaura sessão do admin (criarUsuarioAuth faz logout automático)
-        toast('Usuário criado! Restaurando sua sessão…', 'success');
-        const sessaoAdmin = await autenticar(adminLogin, adminSenha);
-        state.sessao = {
-          id:     sessaoAdmin.id,
-          nome:   sessaoAdmin.nome,
-          login:  sessaoAdmin.login,
-          perfil: sessaoAdmin.perfil,
-        };
-        atualizarUIUsuario();
-
-      } else {
-        // ── EDITAR USUÁRIO EXISTENTE ──
-        const atual = state.usuarios.find(u => u.id === id) || {};
-        const dados = { ...atual, id, nome, login, perfil };
-        // Nota: alteração de senha pelo admin requer Admin SDK (backend)
-        // Aqui apenas atualiza os dados do Firestore
-        await salvarDoc(COLECOES.usuarios, dados);
-      }
-
+    if (!id) {
+      // ── NOVO USUÁRIO — pede confirmação via modal seguro ──
       closeModal('modalUsuario');
-      toast(id ? 'Usuário atualizado' : 'Usuário criado com sucesso!');
+      pedirSenhaAdmin(
+        `Confirme sua senha para criar o usuário <strong>${nome}</strong>:`,
+        async (adminSenha) => {
+          try {
+            await criarUsuarioAuth(login, senha, { nome, login, perfil });
+            toast('Usuário criado! Restaurando sua sessão…', 'success');
+            const sessaoAdmin = await autenticar(state.sessao.login, adminSenha);
+            state.sessao = {
+              id:     sessaoAdmin.id,
+              nome:   sessaoAdmin.nome,
+              login:  sessaoAdmin.login,
+              perfil: sessaoAdmin.perfil,
+            };
+            atualizarUIUsuario();
+            toast('Usuário criado com sucesso!');
+          } catch (e) {
+            console.error('[salvarUsuario]', e);
+            if (e.code === 'auth/email-already-in-use') {
+              toast('Este login já está em uso no sistema de autenticação', 'error');
+            } else if (e.code === 'auth/weak-password') {
+              toast('Senha muito fraca. Use pelo menos 6 caracteres', 'error');
+            } else if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password') {
+              toast('Senha de administrador incorreta', 'error');
+            } else {
+              toast('Erro ao criar usuário: ' + (e.message || ''), 'error');
+            }
+          }
+        }
+      );
+      return;
+    }
+
+    // ── EDITAR USUÁRIO EXISTENTE ──
+    try {
+      const atual = state.usuarios.find(u => u.id === id) || {};
+      const dados = { ...atual, id, nome, login, perfil };
+      await salvarDoc(COLECOES.usuarios, dados);
+      closeModal('modalUsuario');
+      toast('Usuário atualizado');
     } catch (e) {
-      console.error('[salvarUsuario]', e);
-      if (e.code === 'auth/email-already-in-use') {
-        toast('Este login já está em uso no sistema de autenticação', 'error');
-      } else if (e.code === 'auth/weak-password') {
-        toast('Senha muito fraca. Use pelo menos 6 caracteres', 'error');
-      } else if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password') {
-        toast('Senha de administrador incorreta', 'error');
-      } else {
-        toast('Erro ao salvar usuário: ' + (e.message || ''), 'error');
-      }
+      toast('Erro ao salvar usuário: ' + (e.message || ''), 'error');
     }
   }
 
@@ -1575,31 +1573,26 @@ const App = (() => {
     const u = state.usuarios.find(x => x.id === id);
     if (!u) return;
     if (state.sessao?.id === id) { toast('Você não pode excluir seu próprio usuário', 'error'); return; }
-    if (!confirm(`Excluir usuário "${u.nome}"?\n\nIsso removerá o acesso dele ao sistema permanentemente.`)) return;
-
-    // Pede a senha do usuário alvo para deletar do Authentication
-    const senhaAlvo = prompt(`Digite a senha atual de "${u.nome}" para confirmar a exclusão:`);
-    if (!senhaAlvo) { toast('Exclusão cancelada', 'error'); return; }
-
-    // Pede a senha do admin para restaurar sessão após deletar
-    const adminSenha = prompt(`Confirme sua senha de administrador (${state.sessao.login}):`);
-    if (!adminSenha) { toast('Exclusão cancelada', 'error'); return; }
-
-    try {
-      await deletarUsuarioAuth(id, u.login, senhaAlvo, state.sessao.login, adminSenha);
-      toast(`Usuário "${u.nome}" excluído com sucesso`);
-    } catch (e) {
-      console.error('[deletarUsuario]', e);
-      if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password') {
-        toast('Senha do usuário incorreta. Exclusão cancelada.', 'error');
-      } else if (e.code === 'auth/user-not-found') {
-        // Usuário não existe no Auth mas existe no Firestore — remove só do Firestore
-        await excluirDoc(COLECOES.usuarios, id);
-        toast(`Usuário "${u.nome}" removido`, 'success');
-      } else {
-        toast('Erro ao excluir usuário: ' + (e.message || ''), 'error');
+    // Usa modal seguro com dois campos de senha
+    pedirSenhasExclusao(
+      u.nome,
+      async (senhaAlvo, adminSenha) => {
+        try {
+          await deletarUsuarioAuth(id, u.login, senhaAlvo, state.sessao.login, adminSenha);
+          toast(`Usuário "${u.nome}" excluído com sucesso`);
+        } catch (e) {
+          console.error('[deletarUsuario]', e);
+          if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password') {
+            toast('Senha incorreta. Exclusão cancelada.', 'error');
+          } else if (e.code === 'auth/user-not-found') {
+            await excluirDoc(COLECOES.usuarios, id);
+            toast(`Usuário "${u.nome}" removido`, 'success');
+          } else {
+            toast('Erro ao excluir usuário: ' + (e.message || ''), 'error');
+          }
+        }
       }
-    }
+    );
   }
 
   /* ────────────────────────────────────────────────────────────
@@ -1725,6 +1718,126 @@ const App = (() => {
   }
 
   /* toggleChartExpand: substituída por App._renderCatChart inline no renderDashboard */
+
+  /* ────────────────────────────────────────────────────────────
+     MODAIS DE CONFIRMAÇÃO DE SENHA — seguros (sem prompt nativo)
+  ──────────────────────────────────────────────────────────── */
+
+  /**
+   * Abre um modal seguro pedindo a senha do admin.
+   * Ao confirmar, chama callback(senha).
+   */
+  function pedirSenhaAdmin(mensagem, callback) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'modalSenhaAdmin';
+    overlay.innerHTML = `
+      <div class="modal" style="max-width:400px">
+        <div class="modal-header">
+          <h2>🔐 Confirmação</h2>
+          <button onclick="document.getElementById('modalSenhaAdmin').remove()">✕</button>
+        </div>
+        <div class="modal-body">
+          <p style="margin-bottom:16px;color:var(--text2);font-size:.875rem">${mensagem}</p>
+          <div class="form-group">
+            <label>Sua senha de administrador</label>
+            <input type="password" id="inputSenhaAdmin" placeholder="Digite sua senha…" autocomplete="current-password" />
+          </div>
+          <div id="erroSenhaAdmin" class="login-error hidden"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-outline" onclick="document.getElementById('modalSenhaAdmin').remove()">Cancelar</button>
+          <button class="btn-primary" id="btnConfirmarSenhaAdmin">Confirmar</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const input = document.getElementById('inputSenhaAdmin');
+    const btnConfirmar = document.getElementById('btnConfirmarSenhaAdmin');
+    const erroEl = document.getElementById('erroSenhaAdmin');
+
+    // Foco automático
+    setTimeout(() => input?.focus(), 80);
+
+    // Confirmar ao pressionar Enter
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') btnConfirmar.click();
+    });
+
+    btnConfirmar.addEventListener('click', () => {
+      const senha = input.value;
+      if (!senha) {
+        erroEl.textContent = 'Digite sua senha para continuar.';
+        erroEl.classList.remove('hidden');
+        return;
+      }
+      overlay.remove();
+      callback(senha);
+    });
+  }
+
+  /**
+   * Abre um modal seguro com dois campos:
+   * senha do usuário sendo excluído + senha do admin.
+   */
+  function pedirSenhasExclusao(nomeUsuario, callback) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'modalSenhasExclusao';
+    overlay.innerHTML = `
+      <div class="modal" style="max-width:420px">
+        <div class="modal-header">
+          <h2>🗑 Excluir usuário</h2>
+          <button onclick="document.getElementById('modalSenhasExclusao').remove()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="background:var(--danger-lt);border:1px solid var(--danger-border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:18px;font-size:.8125rem;color:var(--danger-dk)">
+            ⚠️ Esta ação removerá <strong>${nomeUsuario}</strong> permanentemente do sistema.
+          </div>
+          <div class="form-group" style="margin-bottom:14px">
+            <label>Senha atual de ${nomeUsuario}</label>
+            <input type="password" id="inputSenhaAlvo" placeholder="Senha do usuário sendo excluído…" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label>Sua senha de administrador</label>
+            <input type="password" id="inputSenhaAdminExc" placeholder="Sua senha…" autocomplete="current-password" />
+          </div>
+          <div id="erroSenhasExclusao" class="login-error hidden"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-outline" onclick="document.getElementById('modalSenhasExclusao').remove()">Cancelar</button>
+          <button class="btn-danger" id="btnConfirmarExclusao">Excluir definitivamente</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const inputAlvo   = document.getElementById('inputSenhaAlvo');
+    const inputAdmin  = document.getElementById('inputSenhaAdminExc');
+    const btnConfirmar = document.getElementById('btnConfirmarExclusao');
+    const erroEl      = document.getElementById('erroSenhasExclusao');
+
+    setTimeout(() => inputAlvo?.focus(), 80);
+
+    [inputAlvo, inputAdmin].forEach(el => {
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') btnConfirmar.click();
+      });
+    });
+
+    btnConfirmar.addEventListener('click', () => {
+      const senhaAlvo  = inputAlvo.value;
+      const adminSenha = inputAdmin.value;
+      if (!senhaAlvo || !adminSenha) {
+        erroEl.textContent = 'Preencha os dois campos para continuar.';
+        erroEl.classList.remove('hidden');
+        return;
+      }
+      overlay.remove();
+      callback(senhaAlvo, adminSenha);
+    });
+  }
 
   function init() {
     renderFraseLogin();
